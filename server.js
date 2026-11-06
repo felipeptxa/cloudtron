@@ -80,16 +80,79 @@ const SESSION_TIMEOUT_MS = 120000;
 // Chave de ambiente para a NVIDIA (usada como fallback da fila).
 const NVIDIA_KEY_ENV = 'NVIDIA_API_KEY';
 
-// Extrai as chaves customizadas por provedor enviadas pelo cliente (se houver).
+// Extrai e normaliza as chaves customizadas por provedor enviadas pelo cliente (se houver).
 function clientDataProviderApiKeys(rawBody) {
   try {
     const parsed = JSON.parse(rawBody || '{}');
-    return parsed && parsed.providerApiKeys && typeof parsed.providerApiKeys === 'object'
+    const rawKeys = parsed && parsed.providerApiKeys && typeof parsed.providerApiKeys === 'object'
       ? parsed.providerApiKeys
       : {};
+
+    const normalized = {};
+    const keyMapping = {
+      nvidia: 'NVIDIA_API_KEY',
+      groq: 'GROQ_API_KEY',
+      openrouter: 'OPENROUTER_API_KEY',
+      google: 'GOOGLE_AI_STUDIO_API_KEY',
+      deepseek: 'DEEPSEEK_API_KEY',
+      anthropic: 'ANTHROPIC_API_KEY'
+    };
+
+    for (const [k, v] of Object.entries(rawKeys)) {
+      if (typeof v === 'string' && v.trim()) {
+        const val = v.trim();
+        normalized[k] = val;
+        normalized[k.toLowerCase()] = val;
+        if (keyMapping[k.toLowerCase()]) {
+          normalized[keyMapping[k.toLowerCase()]] = val;
+        }
+      }
+    }
+    return normalized;
   } catch (_) {
     return {};
   }
+}
+
+// Leitor resiliente de variáveis de ambiente com suporte a fallback no .env
+function getEnvKey(keyName) {
+  if (process.env[keyName]) return process.env[keyName].trim();
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    try {
+      const envContent = fs.readFileSync(envPath, 'utf8').replace(/^\uFEFF/, '');
+      const lines = envContent.split(/\r?\n/);
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx !== -1) {
+          const k = trimmed.slice(0, eqIdx).trim();
+          const v = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+          if (k === keyName) return v;
+          if (keyName === 'NVIDIA_API_KEY' && k === 'API_KEY') return v;
+        }
+      }
+    } catch (_) {}
+  }
+  return '';
+}
+
+// Resolve a credencial correta para o provedor (Payload > Header Bearer > .env)
+function resolveProviderApiKey(provider, providerApiKeys, clientKey) {
+  // 1. Chave explícita normalizada no payload (por envKey ou id curto)
+  if (providerApiKeys[provider.envKey]) return providerApiKeys[provider.envKey];
+  const shortId = provider.name.toLowerCase().split(' ')[0];
+  if (providerApiKeys[shortId]) return providerApiKeys[shortId];
+
+  // 2. Chave de autorização passada no header (aplicada ao provedor primário)
+  if (provider.name === 'NVIDIA NIM' && clientKey) return clientKey;
+
+  // 3. Fallback para variáveis de ambiente locais
+  const envVal = getEnvKey(provider.envKey);
+  if (envVal) return envVal;
+
+  return '';
 }
 
 // Envia um evento SSE de failover para o cliente informando a troca de provedor.
@@ -801,10 +864,26 @@ const server = http.createServer((req, res) => {
     const clientKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
 
     readBodyWithLimit(req, res, async (rawBody) => {
-      const providerApiKeys = clientDataProviderApiKeys(rawBody); // chaves customizadas por provedor (se houver)
-      if (!clientKey && !getEnvApiKey() && !providerApiKeys[NVIDIA_KEY_ENV]) {
+      const providerApiKeys = clientDataProviderApiKeys(rawBody);
+
+      // Mapeia provedores aptos a atender a chamada
+      const activeKeysSummary = [];
+      for (const p of PROVIDER_FAILOVER_QUEUE) {
+        const key = resolveProviderApiKey(p, providerApiKeys, clientKey);
+        if (key) {
+          const masked = key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-3)}` : '***';
+          activeKeysSummary.push(`${p.name} (${masked})`);
+        }
+      }
+
+      console.log(`[PROXY-AUTH] Provedores com credenciais disponíveis: [${activeKeysSummary.length > 0 ? activeKeysSummary.join(', ') : 'NENHUM'}]`);
+
+      // Se nenhum provedor possuir credencial válida, interrompe com mensagem explicativa
+      if (activeKeysSummary.length === 0) {
         res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ error: 'Chave não informada. Clique em "Configurações" no topo.' }));
+        res.end(JSON.stringify({ 
+          error: 'Nenhuma chave de API configurada. Adicione uma chave válida (NVIDIA NIM, Groq, OpenRouter) no menu Configurações ⚙️.' 
+        }));
         return;
       }
       const startTime = Date.now();
@@ -905,10 +984,10 @@ const server = http.createServer((req, res) => {
 
         // ── Loop de Failover sobre a fila de provedores ────────────────────────
         for (const provider of PROVIDER_FAILOVER_QUEUE) {
-          // Resolve a chave do provedor: prioridade clientData.providerApiKeys > env
-          const providerKey = providerApiKeys[provider.envKey] || process.env[provider.envKey] || '';
+          // Resolve a chave do provedor via resolvedor unificado (payload > header bearer > .env)
+          const providerKey = resolveProviderApiKey(provider, providerApiKeys, clientKey);
           if (!providerKey) {
-            console.log(`[FAILOVER] ${provider.name}: chave não configurada, pulando.`);
+            console.log(`[FAILOVER] ⏩ ${provider.name}: credencial ausente, avançando para o próximo.`);
             continue;
           }
 

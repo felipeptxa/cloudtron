@@ -4587,7 +4587,11 @@
     }
 
     function getStoredApiKey() {
-      return getGlobalSettings().apiKey;
+      const s = getGlobalSettings();
+      if (s.apiKey && s.apiKey.trim()) return s.apiKey.trim();
+      const keys = s.providerApiKeys || {};
+      // Fallback para qualquer chave configurada pelo usuário
+      return keys.nvidia || keys.groq || keys.openrouter || keys.google || keys.deepseek || keys.anthropic || '';
     }
 
     function updateSettingsSliderDisplay(type) {
@@ -7111,9 +7115,10 @@
         setTimeout(openSettingsModal, 400);
       }
 
-      // Inicializa LED de status de conexão com base na chave de API
+      // Inicializa LED de status com base na existência de qualquer credencial ativa
       const initialKey = getStoredApiKey();
-      updateNvidiaStatusLed(!!initialKey, initialKey ? 'NVIDIA NIM: Conectado' : 'NVIDIA NIM: Chave de API não configurada');
+      const hasKey = !!initialKey;
+      updateNvidiaStatusLed(hasKey, hasKey ? 'Cloudtron Engine: Conexão Pronta' : 'NVIDIA NIM: Chave de API não configurada');
 
       // Verificação não-intrusiva de atualizações no GitHub Releases
       checkForUpdates();
