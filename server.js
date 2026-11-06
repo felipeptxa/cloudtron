@@ -982,6 +982,11 @@ const server = http.createServer((req, res) => {
         let finalThinking = isThinking;
         let finalSeed = seed;
 
+        // Variáveis de telemetria e acumulação elevadas para o escopo da rota
+        let accumulatedResponseText = '';
+        let chunkCount = 0;
+        let ttft_ms = 0;
+
         // ── Loop de Failover sobre a fila de provedores ────────────────────────
         for (const provider of PROVIDER_FAILOVER_QUEUE) {
           // Resolve a chave do provedor via resolvedor unificado (payload > header bearer > .env)
@@ -1076,9 +1081,10 @@ const server = http.createServer((req, res) => {
           finalThinking = isThinking;
           finalSeed = seed;
 
-          let chunkCount = 0;
-          let ttft_ms = 0;
-          let accumulatedResponseText = '';
+          // Reatribuição (sem 'let') para acumulação no escopo da rota
+          chunkCount = 0;
+          ttft_ms = 0;
+          accumulatedResponseText = '';
           const textDecoder = new TextDecoder('utf-8');
 
           try {
@@ -1111,7 +1117,7 @@ const server = http.createServer((req, res) => {
             if (streamErr.name !== 'AbortError') {
               console.error(`[ERRO STREAM ${provider.name}]:`, streamErr.message);
               // Se houve erro após tokens transmitidos, limpa buffer parcial e tenta próximo
-              accumulatedResponseText = resetAccumulated();
+              accumulatedResponseText = '';
               sendFailoverEvent(res, provider.name, 'Próximo provedor', 'Erro no stream');
             }
             continue;
@@ -1121,12 +1127,13 @@ const server = http.createServer((req, res) => {
         // ── Finalização ────────────────────────────────────────────────────────
         clearTimeout(timeoutId);
         const total_time_ms = Date.now() - startTime;
+        const finalContent = accumulatedResponseText || '';
 
         if (overallSuccess) {
           console.log(`[PROXY] Streaming concluído via ${finalModelUsed} (${total_time_ms / 1000}s).`);
 
           // Grava a interação estruturada no formato JSONL (Clautron Eval Engine)
-          if (accumulatedResponseText || chunkCount > 0) {
+          if (finalContent || chunkCount > 0) {
             logInteraction({
               id: interactionId,
               timestamp: new Date().toISOString(),
@@ -1140,9 +1147,14 @@ const server = http.createServer((req, res) => {
               ttft_ms: ttft_ms || 0,
               total_time_ms: total_time_ms,
               prompt: userPrompt,
-              response: accumulatedResponseText,
+              response: finalContent,
               feedback: null
             });
+          }
+
+          // Fechamento padrão do protocolo SSE
+          if (!res.writableEnded) {
+            res.write(`data: [DONE]\n\n`);
           }
         } else {
           console.error('[PROXY] Todos os provedores da fila falharam.');
