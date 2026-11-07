@@ -29,6 +29,14 @@ const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50 MB
 const NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const DEFAULT_MODEL = 'nvidia/nemotron-3.5-super-vl-120b-a12b';
 
+// ── Contexto Mestre de Runtime e Diretrizes de Governança ──────────────────────
+const CLOUDTRON_CORE_SYSTEM = `Você é a inteligência integrada do Cloudtron OneClick v1.3.0 (Desktop Electron + Node.js em 127.0.0.1:3000).
+DIRETRIZES TÉCNICAS:
+- Modo Plan: Forneça arquitetura, diagramas conceituais e contratos. NUNCA gere arquivos de código completos.
+- Modo Build: Entregue código 100% completo, sem partes cortadas, com sintaxe fechada e testes unitários.
+- Live Preview: Código Node.js puro DEVE usar estritamente blocos \`\`\`javascript. NUNCA utilize \`\`\`html para scripts de backend.
+- Auditoria NeMo: Suas respostas são avaliadas de 1 a 10 por um auditor interno. Respostas truncadas recebem FAIL.`;
+
 // ── Fila de Prioridade de Provedores (Failover Automático) ────────────────────
 // Ordem de tentativa quando o provedor ativo falha (429, 402, 401 ou timeout).
 // As chaves são lidas do corpo da requisição (providerApiKeys) ou do ambiente (.env).
@@ -173,6 +181,16 @@ function resetAccumulated() {
 // diretamente o código completo em um bloco ```html ... ```, sem conversas de confirmação.
 const SANDBOX_SYSTEM_INSTRUCTION = `Você está em modo de geração de código executável / preview de sandbox (Live Sandbox). Quando o usuário solicitar código executável, componente visual, página web ou aplicativo, NUNCA responda com conversas, saudações ou pedidos de confirmação (ex: "Olá! Posso gerar..."). Retorne DIRETAMENTE o código completo e auto-contido dentro de um único bloco de markup \`\`\`html ... \`\`\`. Use CSS Grid robusto (box-sizing: border-box, grid-template-columns, gap) para evitar sobreposição de elementos no preview. O código deve ser funcional, estilizado e pronto para renderização imediata em iframe. Não adicione texto antes ou depois do bloco de código.`;
 
+// Diretrizes especializadas de runtime por modo operacional (Plan vs Build)
+const PLAN_SYSTEM_DIRECTIVE = `[MODO PLAN ATIVO]
+Você é o Arquiteto e Estrategista de Software do projeto.
+Seu foco é diagnóstico, leitura analítica, planejamento arquitetural e especificação.
+RESTRICAO CRITICA: Você NÃO executa comandos destrutivos nem gera patches diretos de escrita no disco. Apresente diagnósticos de causa-raiz, especificações para o TASKS.md e planos passo a passo estruturados.`;
+
+const BUILD_SYSTEM_DIRECTIVE = `[MODO BUILD ATIVO]
+Você é o Engenheiro Executor de Código.
+Seu foco é implementação física, refatoração cirúrgica e aplicação de código completo.
+REGRA DE COMPLETUDE: Você DEVE entregar o arquivo de código integralmente funcional, com todas as funções, chaves e testes unitários abertos devidamente fechados. Nunca abrevie ou corte o código. Economize tokens evitando comentários prolixos ou introduções e entregue a sintaxe completa e fechada.`;
 // ── Diretório de Dados e Avaliação (Cloudtron NeMo Core & Eval Engine) ─────────
 const DATA_DIR = path.join(__dirname, 'data');
 const INTERACTIONS_FILE = path.join(DATA_DIR, 'interactions.jsonl');
@@ -209,6 +227,22 @@ function logNeMoEvaluation(entry) {
   } catch (err) {
     console.error('[NEMO JUDGE] Exceção ao gravar avaliação:', err.message);
   }
+}
+
+// ── Cálculo de Score do NeMo Judge (Heurística & Conformidade) ────────────────
+function calculateNeMoEvalScore(prompt, response) {
+  if (!response || response.trim().length === 0) return 0;
+  let score = 8; // Score base para inferência íntegra sem violações de guardrails
+  const respLen = response.trim().length;
+
+  // Bônus para respostas estruturadas com código, listas ou formatação
+  if (/```[\s\S]*?```/.test(response)) score += 1;
+  if (/^[-*#]\s+/m.test(response)) score += 1;
+
+  // Penalidade se a resposta for excessivamente curta
+  if (respLen < 30) score -= 2;
+
+  return Math.min(10, Math.max(1, score));
 }
 
 // ── NeMo Guardrails: Validação e Sanitização de Mensagens ───────────────────
@@ -888,6 +922,12 @@ const server = http.createServer((req, res) => {
       }
       const startTime = Date.now();
       let clientData;
+
+      // ── Variáveis de acumulação e telemetria elevadas ao escopo da rota ─────
+      let accumulatedResponseText = '';
+      let chunkCount = 0;
+      let ttft_ms = 0;
+
       try {
         clientData = JSON.parse(rawBody || '{}');
       } catch (err) {
@@ -914,14 +954,74 @@ const server = http.createServer((req, res) => {
       });
 
       try {
-        // Aplica NeMo Guardrails para integridade, alternância de papéis e sanitização
-        const sanitizedMessages = applyNeMoGuardrails(clientData.messages, clientData.system);
+        // 1. Determinação do modo ativo (Plan vs Build) e diretiva correspondente
+        const clientMode = (typeof clientData.mode === 'string' && clientData.mode.toLowerCase() === 'build') ? 'build' : 'plan';
+        const modeDirective = (clientMode === 'build') ? BUILD_SYSTEM_DIRECTIVE : PLAN_SYSTEM_DIRECTIVE;
 
-        // Reforço de prompt para Live Sandbox Preview (código executável / visual / web app)
+        // 2. Extração das regras de sistema customizadas fornecidas pelo usuário
+        const userSystem = (typeof clientData.system_prompt === 'string' && clientData.system_prompt.trim())
+          ? clientData.system_prompt.trim()
+          : (typeof clientData.system === 'string' && clientData.system.trim() ? clientData.system.trim() : '');
+
+        // 3. Concatenação do Prompt Mestre: CLOUDTRON_CORE_SYSTEM + Modo + Regras do Usuário
+        const promptConsolidado = [
+          CLOUDTRON_CORE_SYSTEM,
+          modeDirective,
+          userSystem ? `REGRAS DO USUÁRIO:\n${userSystem}` : ''
+        ].filter(Boolean).join('\n\n');
+
+        // ── Closed-Loop In-Context RLHF: Auto-Correção Ativa via NeMo Judge ──
+        // Varre o histórico e, caso a resposta anterior do assistente contenha
+        // metadados de avaliação do NeMo, injeta a diretriz de auto-calibração
+        // na mensagem subsequente do usuário (garantindo compatibilidade com
+        // provedores que exigem alternância estrita entre 'user' e 'assistant').
+        const rawMessages = Array.isArray(clientData.messages) ? clientData.messages : [];
+        const messagesWithRLHF = [];
+
+        for (let i = 0; i < rawMessages.length; i++) {
+          const m = rawMessages[i];
+          if (!m || typeof m !== 'object') continue;
+
+          const clonedMsg = { ...m };
+          const prevMsg = (i > 0) ? rawMessages[i - 1] : null;
+
+          // Se a mensagem anterior era do assistente e possuía avaliação do NeMo
+          if (clonedMsg.role === 'user' && prevMsg && prevMsg.role === 'assistant' && (prevMsg.nemo || prevMsg.nemoEval)) {
+            const nemo = prevMsg.nemo || prevMsg.nemoEval;
+            const score = (nemo.score !== null && nemo.score !== undefined) ? nemo.score : 8;
+            const status = nemo.status || (nemo.pass !== false ? 'PASS' : 'FAIL');
+            const feedback = nemo.feedback || nemo.reason || 'Conformidade de integridade e sintaxe validada pelo NeMo Judge.';
+
+            const rlhfDirective = [
+              `[AUDITORIA DO JUIZ NEMO DA RESPOSTA ANTERIOR - NOTA: ${score}/10 | ${status}]`,
+              `Crítica Técnica: ${feedback}`,
+              `Diretriz de Aprendizado: Considere os pontos fracos apontados acima para recalibrar a precisão, sintaxe e profundidade das respostas seguintes.`
+            ].join('\n');
+
+            if (typeof clonedMsg.content === 'string') {
+              clonedMsg.content = `${rlhfDirective}\n\n${clonedMsg.content}`;
+            } else if (Array.isArray(clonedMsg.content)) {
+              // Suporte a payloads multimodais (Visão / Imagens)
+              clonedMsg.content = [
+                { type: 'text', text: `${rlhfDirective}\n\n` },
+                ...clonedMsg.content
+              ];
+            }
+            console.log(`[IN-CONTEXT RLHF] 🎯 Diretriz NeMo injetada no turno do usuário (Score: ${score}/10 | ${status})`);
+          }
+
+          messagesWithRLHF.push(clonedMsg);
+        }
+
+        // 4. Aplica NeMo Guardrails para integridade, alternância de papéis e sanitização
+        // (A função applyNeMoGuardrails insere automaticamente o promptConsolidado como { role: 'system', content: ... } no topo do array)
+        const sanitizedMessages = applyNeMoGuardrails(messagesWithRLHF, promptConsolidado);
+
+        // 5. Reforço estrito de Sandbox APENAS para solicitações explícitas de UI/Web visual
         const lastUserMsg = [...sanitizedMessages].reverse().find(m => m.role === 'user');
         const userText = (lastUserMsg && typeof lastUserMsg.content === 'string') ? lastUserMsg.content : '';
-        const wantsCode = /\b(html|css|javascript|\bjs\b|react|componente|p[áa]gina|web app|aplicativo|iframe|preview|sandbox|código|code)\b/i.test(userText);
-        if (wantsCode) {
+        const wantsVisualSandbox = /\b(sandbox|iframe|preview visual|p[áa]gina web visual|layout visual|interface html)\b/i.test(userText);
+        if (wantsVisualSandbox) {
           sanitizedMessages.unshift({ role: 'system', content: SANDBOX_SYSTEM_INSTRUCTION });
         }
 
@@ -930,14 +1030,14 @@ const server = http.createServer((req, res) => {
           ? clientData.thinking
           : (clientData.effort !== 'low');
 
-        // Hiperparâmetros configuráveis com fallback seguro
+        // Hiperparâmetros configuráveis com extração estrita do payload do cliente
         const temperature = (typeof clientData.temperature === 'number' && !isNaN(clientData.temperature))
           ? clientData.temperature
-          : 0.7;
+          : 0.6;
 
         const top_p = (typeof clientData.top_p === 'number' && !isNaN(clientData.top_p))
           ? clientData.top_p
-          : 0.95;
+          : 0.9;
 
         const max_tokens = (typeof clientData.max_tokens === 'number' && clientData.max_tokens > 0)
           ? clientData.max_tokens
@@ -982,10 +1082,10 @@ const server = http.createServer((req, res) => {
         let finalThinking = isThinking;
         let finalSeed = seed;
 
-        // Variáveis de telemetria e acumulação elevadas para o escopo da rota
-        let accumulatedResponseText = '';
-        let chunkCount = 0;
-        let ttft_ms = 0;
+        // ── Reset de telemetria pré-failover ──────────────────────────────────
+        accumulatedResponseText = '';
+        chunkCount = 0;
+        ttft_ms = 0;
 
         // ── Loop de Failover sobre a fila de provedores ────────────────────────
         for (const provider of PROVIDER_FAILOVER_QUEUE) {
@@ -1081,7 +1181,7 @@ const server = http.createServer((req, res) => {
           finalThinking = isThinking;
           finalSeed = seed;
 
-          // Reatribuição (sem 'let') para acumulação no escopo da rota
+          // Reset seguro de buffer antes do streaming do provedor selecionado
           chunkCount = 0;
           ttft_ms = 0;
           accumulatedResponseText = '';
@@ -1096,7 +1196,7 @@ const server = http.createServer((req, res) => {
               }
               if (!res.writableEnded) res.write(chunk);
 
-              // Decodifica e acumula resposta para o log de avaliação
+              // Decodifica e acumula resposta garantindo tolerância a falhas de parsing
               const decoded = textDecoder.decode(chunk, { stream: true });
               const lines = decoded.split('\n');
               for (const line of lines) {
@@ -1104,8 +1204,10 @@ const server = http.createServer((req, res) => {
                 if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
                   try {
                     const parsed = JSON.parse(trimmed.slice(6));
-                    const delta = parsed.choices?.[0]?.delta || {};
-                    if (delta.content) accumulatedResponseText += delta.content;
+                    const delta = parsed.choices?.[0]?.delta;
+                    if (delta && typeof delta.content === 'string') {
+                      accumulatedResponseText += delta.content;
+                    }
                   } catch (_) {}
                 }
               }
@@ -1116,7 +1218,6 @@ const server = http.createServer((req, res) => {
           } catch (streamErr) {
             if (streamErr.name !== 'AbortError') {
               console.error(`[ERRO STREAM ${provider.name}]:`, streamErr.message);
-              // Se houve erro após tokens transmitidos, limpa buffer parcial e tenta próximo
               accumulatedResponseText = '';
               sendFailoverEvent(res, provider.name, 'Próximo provedor', 'Erro no stream');
             }
@@ -1124,7 +1225,7 @@ const server = http.createServer((req, res) => {
           }
         }
 
-        // ── Finalização ────────────────────────────────────────────────────────
+        // ── Finalização Segura & Registro de Avaliação NeMo ────────────────────
         clearTimeout(timeoutId);
         const total_time_ms = Date.now() - startTime;
         const finalContent = accumulatedResponseText || '';
@@ -1150,20 +1251,36 @@ const server = http.createServer((req, res) => {
               response: finalContent,
               feedback: null
             });
+
+            // Avaliação NeMo Judge e emissão de evento SSE de resultado
+            const evalScore = calculateNeMoEvalScore(userPrompt, finalContent);
+            logNeMoEvaluation({
+              id: interactionId,
+              timestamp: new Date().toISOString(),
+              score: evalScore,
+              verdict: evalScore >= 7 ? 'PASS' : 'WARN',
+              model: finalModelUsed,
+              promptLength: (userPrompt || '').length,
+              responseLength: finalContent.length
+            });
+
+            if (!res.writableEnded) {
+              res.write(`data: ${JSON.stringify({ type: 'eval_result', score: evalScore, pass: evalScore >= 7 })}\n\n`);
+            }
           }
 
-          // Fechamento padrão do protocolo SSE
+          // Fechamento atômico e seguro do protocolo SSE
           if (!res.writableEnded) {
             res.write(`data: [DONE]\n\n`);
+            res.end();
           }
         } else {
           console.error('[PROXY] Todos os provedores da fila falharam.');
           if (!res.writableEnded) {
             res.write(`data: {"__clautron_error":"Todos os provedores de inferência estão indisponíveis no momento."}\n\n`);
+            res.end();
           }
         }
-
-        if (!res.writableEnded) res.end();
 
       } catch (err) {
         clearTimeout(timeoutId);

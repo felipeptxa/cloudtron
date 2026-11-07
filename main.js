@@ -19,7 +19,7 @@ if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder('ipv4first');
 }
 
-const { app, BrowserWindow, shell, globalShortcut } = require('electron');
+const { app, BrowserWindow, shell, globalShortcut, Menu, MenuItem } = require('electron');
 const path = require('path');
 
 // 1. Inicializa o servidor proxy local do Cloudtron em segundo plano
@@ -137,6 +137,60 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
+    }
+  });
+
+  // ── Habilitação do Menu de Contexto Nativo (Edição e Seleção de Texto) ───────
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const hasSelection = Boolean(params.selectionText && params.selectionText.trim());
+
+    if (!params.isEditable && !hasSelection) {
+      return;
+    }
+
+    const menu = new Menu();
+
+    if (params.isEditable) {
+      menu.append(new MenuItem({
+        label: 'Desfazer',
+        role: 'undo',
+        enabled: Boolean(params.editFlags ? params.editFlags.canUndo : true)
+      }));
+      menu.append(new MenuItem({
+        label: 'Refazer',
+        role: 'redo',
+        enabled: Boolean(params.editFlags ? params.editFlags.canRedo : true)
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({
+        label: 'Recortar',
+        role: 'cut',
+        enabled: Boolean(params.editFlags ? params.editFlags.canCut : true)
+      }));
+      menu.append(new MenuItem({
+        label: 'Copiar',
+        role: 'copy',
+        enabled: Boolean(params.editFlags ? params.editFlags.canCopy : true)
+      }));
+      menu.append(new MenuItem({
+        label: 'Colar',
+        role: 'paste',
+        enabled: Boolean(params.editFlags ? params.editFlags.canPaste : true)
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({
+        label: 'Selecionar Tudo',
+        role: 'selectAll',
+        enabled: Boolean(params.editFlags ? params.editFlags.canSelectAll : true)
+      }));
+      menu.popup({ window: mainWindow });
+    } else if (hasSelection) {
+      menu.append(new MenuItem({
+        label: 'Copiar',
+        role: 'copy',
+        enabled: Boolean(params.editFlags ? params.editFlags.canCopy : true)
+      }));
+      menu.popup({ window: mainWindow });
     }
   });
 

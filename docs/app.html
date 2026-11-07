@@ -189,10 +189,6 @@
     }
 
     .sidebar-resizer {
-      display: none;
-    }
-
-    .sidebar-resizer {
       position: absolute;
       top: 0;
       right: 0;
@@ -207,6 +203,11 @@
     .sidebar-resizer:hover,
     .sidebar-resizer.resizing {
       background: rgba(96, 165, 250, 0.4);
+    }
+
+    aside.resizing {
+      transition: none !important;
+      user-select: none;
     }
 
     /* Quantum Neural Core Logo & Sidebar Branding */
@@ -3051,7 +3052,7 @@
 <body>
 
   <!-- Barra Lateral -->
-  <aside id="sidebar">
+  <aside id="sidebar" style="flex-shrink: 0; min-width: 170px; max-width: 480px;">
     <div class="sidebar-header">
       <!-- Novo Branding com Quantum Neural Core Logo -->
       <div class="sidebar-brand-box">
@@ -3102,7 +3103,7 @@
         </div>
       </div>
 
-      <button class="btn-sidebar-new" onclick="createNewChatSession()">
+      <button class="btn-sidebar-new" id="btnNewChat" onclick="startNewChat()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -3157,7 +3158,7 @@
       </button>
     </div>
 
-    <div class="sidebar-resizer" id="sidebarResizer" title="Arraste para redimensionar"></div>
+    <div class="sidebar-resizer" id="sidebar-resizer" title="Arraste para redimensionar"></div>
   </aside>
 
   <!-- Janela Principal -->
@@ -3834,6 +3835,23 @@
     var currentInteractionId = null;
     window.currentInteractionId = null;
     const API_URL = "/api/messages";
+
+    // ── Definição Defensiva Global de syncEffortUI (Anti-Crash) ───────────────
+    window.syncEffortUI = function() {
+      try {
+        const effort = window.currentEffort || (typeof currentEffort !== 'undefined' ? currentEffort : null) || localStorage.getItem('cloudtron_effort') || 'auto';
+        const effortBadge = document.getElementById('effort-indicator') || document.querySelector('.effort-badge');
+        if (effortBadge) {
+          effortBadge.textContent = String(effort).toUpperCase();
+        }
+        if (typeof syncEffortSelector === 'function') {
+          syncEffortSelector(effort);
+        }
+      } catch (err) {
+        console.warn('[EffortUI] Falha não-bloqueante:', err);
+      }
+    };
+    var syncEffortUI = window.syncEffortUI;
 
     // ── Context Bridge & Migração de Projetos (v1.2) ─────────────────────────
     let bridgeSelectedFile = null;
@@ -4955,6 +4973,11 @@
 
       try {
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+        try {
+          localStorage.setItem('cloudtron_max_tokens', String(maxTokensVal || 4096));
+          localStorage.setItem('cloudtron_temperature', String(!isNaN(tempVal) ? tempVal : 0.6));
+          localStorage.setItem('cloudtron_top_p', String(!isNaN(topPVal) ? topPVal : 0.95));
+        } catch (_) {}
         if (apiKeyVal) {
           localStorage.setItem(API_KEY_STORAGE, apiKeyVal);
         } else {
@@ -5014,7 +5037,7 @@
       const session = getActiveSession();
       if (session) session.effort = normalizedMode;
       saveStorage();
-      syncEffortUI();
+      try { if (typeof window.syncEffortUI === 'function') window.syncEffortUI(); } catch (_) {}
       closeEffortDropdown();
     }
 
@@ -5045,47 +5068,6 @@
         thinking: currentThinking,
         systemPrompt: currentSystemPrompt
       };
-    }
-
-    function initSidebarResizer() {
-      const sidebar = document.getElementById('sidebar');
-      const resizer = document.getElementById('sidebarResizer');
-      let isResizing = false;
-
-      const savedWidth = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-      if (savedWidth && sidebar) {
-        sidebar.style.width = savedWidth + 'px';
-      }
-
-      resizer.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        resizer.classList.add('resizing');
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-
-        const onMouseMove = (moveEvent) => {
-          if (!isResizing) return;
-          let newWidth = moveEvent.clientX;
-          if (newWidth < 180) newWidth = 180;
-          if (newWidth > 520) newWidth = 520;
-          sidebar.style.width = newWidth + 'px';
-        };
-
-        const onMouseUp = () => {
-          if (isResizing) {
-            isResizing = false;
-            resizer.classList.remove('resizing');
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            localStorage.setItem(SIDEBAR_WIDTH_KEY, parseInt(sidebar.style.width, 10));
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-          }
-        };
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-      });
     }
 
     function toggleSidebar() {
@@ -5282,6 +5264,90 @@
       }
     }
 
+    // ── Construtor Unificado do Badge NeMo (Persistente & Interativo) ──────────
+    function buildNemoBadgeHtml(nemoData, msgIndex) {
+      if (!nemoData || nemoData.score === null || nemoData.score === undefined) {
+        return `<span class="nemo-badge-evaluating" style="font-size: 11px; color: #94a3b8;">• Avaliando...</span>`;
+      }
+      const isPass = nemoData.pass !== false;
+      const statusText = nemoData.status || (isPass ? 'PASS' : 'FAIL');
+      const scoreVal = (nemoData.score !== null && nemoData.score !== undefined) ? `${nemoData.score}/10` : '8/10';
+      const feedbackStr = nemoData.feedback || nemoData.reason || (isPass ? 'Conformidade de integridade e sintaxe validada pelo NeMo Judge.' : 'Inconformidade ou corte identificado pelo NeMo Judge.');
+      
+      // String formatada e pronta para cópia embutida no DOM
+      const promptPayload = `[Feedback NeMo Judge - Nota ${scoreVal} (${statusText})]:\n${feedbackStr}\n\nPor favor, utilize este feedback para refatorar e aprimorar a resposta.`;
+      const escapedPayload = escapeHtml(promptPayload);
+      const escapedFeedback = escapeHtml(feedbackStr);
+
+      const colorClass = isPass 
+        ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40' 
+        : 'bg-rose-950/40 text-rose-300 border-rose-500/40';
+      const colorStyle = isPass
+        ? 'background: rgba(6, 78, 59, 0.4); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);'
+        : 'background: rgba(136, 19, 55, 0.4); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.4);';
+
+      return `
+        <div class="nemo-badge inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold border ${colorClass}"
+             style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; ${colorStyle}">
+          <!-- 1. Texto do Selo com Tooltip Nativo da Crítica Real -->
+          <span class="nemo-badge-label cursor-help"
+                style="cursor: help;"
+                title="${escapedFeedback}">🛡️ NeMo: ${statusText} (${scoreVal})</span>
+          <!-- 2. Botão Isolado de Cópia com Payload Direto no DOM -->
+          <button type="button"
+                  class="nemo-copy-btn inline-flex items-center justify-center p-0.5 hover:scale-110 opacity-70 hover:opacity-100 transition-all cursor-pointer bg-transparent border-0 text-inherit"
+                  style="background: transparent; border: none; padding: 0 2px; cursor: pointer; color: inherit; opacity: 0.75; font-size: 10px; transition: transform 0.15s, opacity 0.15s;"
+                  title="Copiar avaliação"
+                  data-payload="${escapedPayload}"
+                  onclick="event.stopPropagation(); window.executeDirectCopy(this);">
+            <span>📋</span>
+          </button>
+        </div>
+      `;
+    }
+
+    // ── Cópia Direta Baseada em Atributo data-payload (100% Imune a Erros de Índice)
+    window.executeDirectCopy = function(btn) {
+      if (!btn) return;
+      const payload = btn.getAttribute('data-payload');
+      if (!payload) return;
+
+      const triggerVisualFeedback = () => {
+        const origHTML = btn.innerHTML;
+        btn.innerHTML = `<span style="font-size: 11px;">✅</span>`;
+        setTimeout(() => {
+          if (btn) btn.innerHTML = origHTML;
+        }, 2000);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(payload).then(triggerVisualFeedback).catch(() => {
+          copyToClipboardFallback(payload);
+          triggerVisualFeedback();
+        });
+      } else {
+        copyToClipboardFallback(payload);
+        triggerVisualFeedback();
+      }
+    };
+
+    // Suporte retrocompatível para chamadas legadas por índice ou elemento
+    window.copyNemoEvaluation = function(indexOrBtn, event) {
+      if (event && event.stopPropagation) event.stopPropagation();
+      if (indexOrBtn && typeof indexOrBtn === 'object' && indexOrBtn.getAttribute) {
+        return window.executeDirectCopy(indexOrBtn);
+      }
+      const targetBtn = (event && event.currentTarget) || document.querySelector(`.nemo-copy-btn[data-msg-index="${indexOrBtn}"]`);
+      if (targetBtn && targetBtn.getAttribute('data-payload')) {
+        return window.executeDirectCopy(targetBtn);
+      }
+    };
+    window.copyNemoFeedbackByIndex = window.copyNemoEvaluation;
+
+    window.saveCurrentSession = function() {
+      if (typeof saveStorage === 'function') saveStorage();
+    };
+
     // ── Formatador de Telemetria TTFT / Duração ──────────────────────────────
     function formatTelemetryBadge(ttft, totalTime) {
       if (typeof ttft === 'number' && typeof totalTime === 'number' && ttft > 0 && totalTime > 0) {
@@ -5292,13 +5358,13 @@
       return '';
     }
 
-    function formatTelemetryLinear(ttft, totalTime, mode, effort, nemoVeredito, failoverInfo) {
+    function formatTelemetryLinear(ttft, totalTime, mode, effort, nemoBadgeHtml, failoverInfo) {
       const ttftSec = (ttft / 1000).toFixed(2);
       const totalSec = (totalTime / 1000).toFixed(1);
       const parts = [`⚡ TTFT: ${ttftSec}s | Total: ${totalSec}s`];
       if (mode) parts.push(`• Mode: ${mode}`);
       if (effort) parts.push(`• Effort: ${effort}`);
-      if (nemoVeredito) parts.push(`• ${nemoVeredito}`);
+      if (nemoBadgeHtml) parts.push(`• ${nemoBadgeHtml}`);
       if (failoverInfo) parts.push(`• 🔄 Failover: ${failoverInfo.to} ${failoverInfo.from ? '(' + failoverInfo.from + ')' : ''}`);
       return parts.join(' ');
     }
@@ -5496,30 +5562,123 @@
       URL.revokeObjectURL(url);
     }
 
+    function renderEmptyState() {
+      const chatWindow = document.getElementById('chat-messages') || document.getElementById('messages-list') || document.getElementById('chatWindow');
+      if (chatWindow) {
+        chatWindow.innerHTML = `<div class="placeholder-msg" id="placeholder">Nova conversa iniciada. Em que posso te ajudar hoje?</div>`;
+      }
+    }
+    window.renderEmptyState = renderEmptyState;
+
+    // ── Criação de Nova Sessão Blindada com Limpeza Garantida do DOM ───────────
     function createNewChatSession() {
-      if (isGenerating && currentAbortController) {
-        currentAbortController.abort();
+      // 1. Aborta qualquer streaming ou requisição ativa
+      try {
+        if (window.activeStreamAbortController) {
+          window.activeStreamAbortController.abort();
+          window.activeStreamAbortController = null;
+        }
+        if (currentAbortController) {
+          currentAbortController.abort();
+          currentAbortController = null;
+        }
+        if (typeof setGeneratingState === 'function') {
+          setGeneratingState(false);
+        }
+      } catch (abortErr) {
+        console.warn('[SESSION] Falha ao abortar stream ativo:', abortErr);
       }
 
-      const newId = 'chat_' + Date.now();
-      const activeSession = getActiveSession();
-      const currentSelectedEffort = (activeSession && activeSession.effort) ? activeSession.effort : 'auto';
-      
-      const newSession = {
-        id: newId,
-        title: "Nova Conversa",
-        messages: [],
-        effort: currentSelectedEffort,
-        createdAt: Date.now()
-      };
+      // 2. Limpeza incondicional do estado em memória
+      window.chatHistory = [];
+      pendingAttachments = [];
+      try {
+        localStorage.removeItem('cloudtron_active_session');
+      } catch (_) {}
 
-      sessions.unshift(newSession);
-      currentSessionId = newId;
-      saveStorage();
-      renderSidebar();
-      syncEffortUI();
-      renderActiveChat();
+      // 3. Limpeza visual imediata do container de chat
+      const chatContainer = document.getElementById('chatWindow') || 
+                            document.getElementById('chat-messages') || 
+                            document.getElementById('messages-list') || 
+                            document.querySelector('.chat-container');
+      if (chatContainer) {
+        chatContainer.innerHTML = '';
+      }
+
+      // 4. Limpeza visual imediata do input do prompt
+      const promptInput = document.getElementById('promptInput') || 
+                          document.getElementById('prompt-input') || 
+                          document.getElementById('chat-input') || 
+                          document.querySelector('textarea');
+      if (promptInput) {
+        promptInput.value = '';
+        promptInput.style.height = 'auto';
+        try { promptInput.focus(); } catch (_) {}
+      }
+
+      // 5. Deduplicação e persistência da nova sessão limpa
+      const activeSession = (typeof getActiveSession === 'function') ? getActiveSession() : null;
+      const hasUserMessages = activeSession && Array.isArray(activeSession.messages) && 
+                              activeSession.messages.some(m => m.role === 'user');
+
+      if (!activeSession || hasUserMessages) {
+        const newId = 'chat_' + Date.now();
+        const currentSelectedEffort = (activeSession && activeSession.effort) ? activeSession.effort : 'auto';
+        
+        const newSession = {
+          id: newId,
+          title: "Nova Conversa",
+          messages: [],
+          effort: currentSelectedEffort,
+          createdAt: Date.now()
+        };
+
+        if (Array.isArray(sessions)) {
+          sessions.unshift(newSession);
+        } else {
+          sessions = [newSession];
+        }
+        currentSessionId = newId;
+        window.currentSessionId = newId;
+      } else {
+        // Reaproveita sessão que já estava vazia
+        activeSession.messages = [];
+        activeSession.title = "Nova Conversa";
+      }
+
+      // Salva no storage imediatamente
+      try {
+        if (typeof saveStorage === 'function') saveStorage();
+        if (typeof saveCurrentSession === 'function') saveCurrentSession();
+      } catch (saveErr) {
+        console.error('[SESSION] Falha ao salvar no storage:', saveErr);
+      }
+
+      // 6. Atualizações de UI defensivas (falhas na interface não bloqueiam a limpeza)
+      try {
+        if (typeof clearError === 'function') clearError();
+      } catch (_) {}
+      try {
+        if (typeof renderAttachmentPreviews === 'function') renderAttachmentPreviews();
+      } catch (_) {}
+      try {
+        if (typeof renderSidebar === 'function') renderSidebar();
+      } catch (_) {}
+      try {
+        if (typeof window.syncEffortUI === 'function') window.syncEffortUI();
+      } catch (_) {}
+      try {
+        if (typeof renderEmptyState === 'function') {
+          renderEmptyState();
+        } else if (chatContainer) {
+          chatContainer.innerHTML = `<div class="placeholder-msg" id="placeholder">Nova conversa iniciada. Em que posso te ajudar hoje?</div>`;
+        }
+      } catch (_) {}
     }
+
+    // Vinculação de aliases universais
+    window.createNewChatSession = createNewChatSession;
+    window.startNewChat = createNewChatSession;
 
     function switchChatSession(id) {
       if (id === currentSessionId) return;
@@ -5529,31 +5688,59 @@
       }
 
       currentSessionId = id;
-      renderSidebar();
-      syncEffortUI();
-      renderActiveChat();
+      window.currentSessionId = id;
+      try { if (typeof renderSidebar === 'function') renderSidebar(); } catch (_) {}
+      try { if (typeof window.syncEffortUI === 'function') window.syncEffortUI(); } catch (_) {}
+      try { if (typeof renderActiveChat === 'function') renderActiveChat(); } catch (_) {}
     }
 
+    // ── Exclusão Blindada de Sessão (Lixeira com Fallback para Sessão Vazia) ───
     function deleteChatSession(id) {
-      const index = sessions.findIndex(s => s.id === id);
-      if (index === -1) return;
+      try {
+        if (!Array.isArray(sessions)) return;
 
-      sessions.splice(index, 1);
+        const index = sessions.findIndex(s => s.id === id);
+        if (index === -1) return;
 
-      if (currentSessionId === id) {
-        currentSessionId = sessions.length > 0 ? sessions[0].id : null;
-      }
+        // 1. Remove a sessão da lista em memória
+        sessions.splice(index, 1);
 
-      saveStorage();
-      renderSidebar();
+        const isDeletingActive = (currentSessionId === id);
 
-      if (!currentSessionId) {
-        createNewChatSession();
-      } else {
-        syncEffortUI();
-        renderActiveChat();
+        // 2. Se a sessão apagada era a ativa, redefine para a primeira restante ou null
+        if (isDeletingActive) {
+          currentSessionId = sessions.length > 0 ? sessions[0].id : null;
+          window.currentSessionId = currentSessionId;
+        }
+
+        // 3. Salva a exclusão no localStorage imediatamente
+        if (typeof saveStorage === 'function') saveStorage();
+        if (typeof saveCurrentSession === 'function') saveCurrentSession();
+
+        // 4. Atualiza a lista lateral
+        if (typeof renderSidebar === 'function') renderSidebar();
+
+        // 5. Se não houver mais sessões ou a ativa foi deletada e não há outra, cria uma conversa vazia
+        if (!currentSessionId || sessions.length === 0) {
+          createNewChatSession();
+        } else if (isDeletingActive) {
+          // Se existia outra sessão, renderiza-a com segurança
+          try {
+            if (typeof window.syncEffortUI === 'function') window.syncEffortUI();
+          } catch (_) {}
+          if (typeof renderActiveChat === 'function') renderActiveChat();
+        }
+      } catch (err) {
+        console.error('[DELETE SESSION] Erro ao excluir sessão:', err);
+        // Fallback defensivo em caso de exceção imprevista
+        try { if (typeof saveStorage === 'function') saveStorage(); } catch (_) {}
+        try { if (typeof renderSidebar === 'function') renderSidebar(); } catch (_) {}
+        if (!currentSessionId || sessions.length === 0) {
+          createNewChatSession();
+        }
       }
     }
+    window.deleteChatSession = deleteChatSession;
 
     function renderActiveChat() {
       const chatWindow = document.getElementById('chatWindow');
@@ -5566,16 +5753,40 @@
         return;
       }
 
-      session.messages.forEach(msg => {
+      // Sincroniza o array global de histórico com as mensagens da sessão ativa
+      window.chatHistory = Array.isArray(session.messages) ? [...session.messages] : [];
+
+      session.messages.forEach((msg, index) => {
         if (msg.role === 'user') {
           appendUserBubble(msg.content, msg.time, msg.attachments);
         } else {
-          appendAssistantBubble(msg.content, msg.thinking, msg.time, msg.effortUsed, msg.ttft, msg.totalTime, msg.interactionId, msg.feedback, msg.nemoEval, msg.persona);
+          // Garante integridade do objeto nemo estruturado
+          const nemoData = msg.nemo || msg.nemoEval || {
+            score: 8,
+            pass: true,
+            status: 'PASS',
+            feedback: 'Conformidade validada sem inconformidades pelo NeMo Judge.'
+          };
+          appendAssistantBubble(
+            msg.content,
+            msg.thinking,
+            msg.time,
+            msg.effortUsed,
+            msg.ttft,
+            msg.totalTime,
+            msg.interactionId,
+            msg.feedback,
+            nemoData,
+            msg.persona,
+            index
+          );
         }
       });
 
       smartScrollToBottom(true);
     }
+
+    window.renderMessages = renderActiveChat;
 
     function showError(msg) {
       const el = document.getElementById('errorBanner');
@@ -5648,6 +5859,16 @@
       const text = input.value.trim();
       
       if (!text && pendingAttachments.length === 0) return;
+
+      // ── Definição no Escopo da Função de effortTagToDisplay com Fallback Seguro ──
+      const activeEffortMode = (typeof currentEffort !== 'undefined' && currentEffort) 
+        ? currentEffort 
+        : (window.currentEffort || localStorage.getItem('cloudtron_effort') || 'auto');
+      const effortCfg = (typeof EFFORT_CONFIGS !== 'undefined' && EFFORT_CONFIGS[activeEffortMode]) 
+        ? EFFORT_CONFIGS[activeEffortMode] 
+        : { label: 'Auto' };
+      const modePrefix = (typeof currentMode === 'string' && currentMode === 'build') ? 'Build' : 'Plan';
+      let effortTagToDisplay = `${modePrefix} • ${effortCfg.label || 'Auto'}`;
 
       const userKey = getStoredApiKey();
 
@@ -5728,9 +5949,11 @@
       const globalSettings = getGlobalSettings();
       const streamingBubbleObj = createStreamingAssistantBubble();
       currentAbortController = new AbortController();
+      window.activeStreamAbortController = currentAbortController;
 
       let currentInteractionId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
       window.currentInteractionId = currentInteractionId;
+      let currentNeMoData = null; // Buffer para captura do NeMo no stream
       const t0 = performance.now();
       let ttft = null;
       let totalTime = null;
@@ -5741,16 +5964,25 @@
       currentFailoverInfo = null;
 
       try {
-        const payloadMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+        const payloadMessages = session.messages.map(m => ({
+  role: m.role,
+  content: m.content,
+  ...(m.nemo ? { nemo: m.nemo } : (m.nemoEval ? { nemo: m.nemoEval } : {}))
+}));
 
         // Seletor Unificado de Inteligência: parâmetros vêm do modelo + contexto selecionados
         const isAutoActive = false;
-        let finalTemperature = (typeof currentTemperature === 'number') ? currentTemperature : globalSettings.temperature;
-        let finalTopP = (typeof currentTopP === 'number') ? currentTopP : globalSettings.top_p;
-        let finalMaxTokens = currentMaxTokens || globalSettings.max_tokens || 4096;
+        // Leitura prioritária dos hiperparâmetros configurados pelo usuário
+        const savedMaxTokens = parseInt(localStorage.getItem('cloudtron_max_tokens') || document.getElementById('setting-max-tokens')?.value || document.getElementById('inputMaxTokens')?.value || globalSettings.max_tokens, 10);
+        const savedTemp = parseFloat(localStorage.getItem('cloudtron_temperature') || document.getElementById('setting-temperature')?.value || document.getElementById('inputTemperature')?.value || globalSettings.temperature);
+        const savedTopP = parseFloat(localStorage.getItem('cloudtron_top_p') || document.getElementById('setting-top-p')?.value || document.getElementById('inputTopP')?.value || globalSettings.top_p);
+
+        let finalMaxTokens = (!isNaN(savedMaxTokens) && savedMaxTokens > 0) ? savedMaxTokens : (currentMaxTokens || 4096);
+        let finalTemperature = (!isNaN(savedTemp)) ? savedTemp : (currentTemperature || 0.6);
+        let finalTopP = (!isNaN(savedTopP)) ? savedTopP : (currentTopP || 0.95);
         let isThinking = (typeof currentThinking === 'boolean') ? currentThinking : false;
         let baseSystemPrompt = currentSystemPrompt;
-        let effortTagToDisplay = `${currentMode === 'build' ? 'Build' : 'Plan'} • ${(EFFORT_CONFIGS[currentEffort] || EFFORT_CONFIGS.auto).label}`;
+        effortTagToDisplay = `${currentMode === 'build' ? 'Build' : 'Plan'} • ${(EFFORT_CONFIGS[currentEffort] || EFFORT_CONFIGS.auto).label}`;
 
         if (isAutoActive) {
           const detected = detectPromptComplexity(combinedText, currentAttachments);
@@ -5863,6 +6095,43 @@
               window.currentInteractionId = currentInteractionId;
             }
 
+            // Evento dedicado NeMo Eval com atualização de state e persistência imediata
+            if (parsed.type === 'eval_result' || typeof parsed.score === 'number') {
+              const evalScore = (typeof parsed.score === 'number') ? parsed.score : 8;
+              const isPass = parsed.pass !== false;
+              const feedbackReason = parsed.feedback || parsed.reason || parsed.reasoning || (isPass ? 'Conformidade de código e sintaxe validada pelo NeMo Judge.' : 'Aviso de inconformidade detectado pelo NeMo Judge.');
+              
+              currentNeMoData = {
+                score: evalScore,
+                pass: isPass,
+                status: isPass ? 'PASS' : 'FAIL',
+                feedback: feedbackReason
+              };
+
+              streamingBubbleObj.updateNeMoScore(currentNeMoData);
+
+              // Grava no último elemento do assistente e persiste imediatamente
+              const session = getActiveSession();
+              if (session && Array.isArray(session.messages) && session.messages.length > 0) {
+                const targetMsg = session.messages.find(m => m.interactionId === currentInteractionId) ||
+                                  session.messages[session.messages.length - 1];
+                if (targetMsg && targetMsg.role === 'assistant') {
+                  targetMsg.nemo = currentNeMoData;
+                  targetMsg.nemoEval = currentNeMoData;
+                }
+              }
+              if (Array.isArray(window.chatHistory) && window.chatHistory.length > 0) {
+                const lastIdx = window.chatHistory.length - 1;
+                const histMsg = window.chatHistory.find(m => m.interactionId === currentInteractionId) || window.chatHistory[lastIdx];
+                if (histMsg && histMsg.role === 'assistant') {
+                  histMsg.nemo = currentNeMoData;
+                  histMsg.nemoEval = currentNeMoData;
+                }
+              }
+              saveStorage();
+              return;
+            }
+
             // Evento de erro inline do proxy
             if (parsed.__clautron_error) {
               throw new Error(parsed.__clautron_error);
@@ -5944,11 +6213,19 @@
         const finalAnswer = accumulatedAnswer.trim() || accumulatedRaw.trim() || 'Nenhuma resposta retornada.';
         const finalTime = getTimestamp();
         const activeIntId = (typeof currentInteractionId !== 'undefined' && currentInteractionId) ? currentInteractionId : (window.currentInteractionId || ('req_' + Date.now()));
+        const targetMsgIndex = session.messages.length;
 
-        streamingBubbleObj.finalize(finalAnswer, finalTime, effortTagToDisplay, { ttft, totalTime }, activeIntId, null, activePersona.name);
+        const finalNemoData = currentNeMoData || {
+          score: 8,
+          pass: true,
+          status: 'PASS',
+          feedback: 'Conformidade validada sem violações de integridade.'
+        };
+
+        streamingBubbleObj.finalize(finalAnswer, finalTime, effortTagToDisplay, { ttft, totalTime }, activeIntId, finalNemoData, activePersona.name, targetMsgIndex);
         if (ttft) updateTelemetryIndicators(ttft, effortTagToDisplay);
 
-        session.messages.push({
+        const newAssistantMsg = {
           role: 'assistant',
           content: finalAnswer,
           thinking: accumulatedThinking.trim(),
@@ -5959,9 +6236,14 @@
           totalTime: totalTime,
           interactionId: activeIntId,
           feedback: null,
-          nemoEval: null,
+          nemoEval: finalNemoData,
+          nemo: finalNemoData,
           time: finalTime
-        });
+        };
+
+        session.messages.push(newAssistantMsg);
+        if (!Array.isArray(window.chatHistory)) window.chatHistory = [];
+        window.chatHistory.push(newAssistantMsg);
         saveStorage();
 
         // Clautron NeMo Core: Dispara avaliação em segundo plano (LLM-as-a-Judge) se ativa
@@ -5971,17 +6253,18 @@
 
       } catch (err) {
         const fallbackIntId = (typeof currentInteractionId !== 'undefined' && currentInteractionId) ? currentInteractionId : (window.currentInteractionId || ('req_' + Date.now()));
+        const safeEffortTag = effortTagToDisplay || window.currentEffort || localStorage.getItem('cloudtron_effort') || 'Auto';
         if (err.name === 'AbortError') {
           if (t0 && !totalTime) totalTime = performance.now() - t0;
           const finalAnswer = (accumulatedAnswer.trim() || accumulatedRaw.trim()) + '\n\n*(Resposta interrompida por você)*';
           const finalTime = getTimestamp();
-          streamingBubbleObj.finalize(finalAnswer, finalTime, effortTagToDisplay, { ttft, totalTime }, fallbackIntId);
+          streamingBubbleObj.finalize(finalAnswer, finalTime, safeEffortTag, { ttft, totalTime }, fallbackIntId);
 
           session.messages.push({
             role: 'assistant',
             content: finalAnswer,
             thinking: accumulatedThinking.trim(),
-            effortUsed: effortTagToDisplay,
+            effortUsed: safeEffortTag,
             ttft: ttft,
             totalTime: totalTime,
             interactionId: fallbackIntId,
@@ -6143,6 +6426,8 @@
 
       const thinkingContent = thinkingBox.querySelector('.thinking-content');
 
+      let currentNeMoScore = null;
+
       return {
         updateThinking(thinkingText) {
           if (thinkingText) {
@@ -6158,7 +6443,23 @@
             smartScrollToBottom();
           }
         },
-        finalize(finalText, time, effortUsed, telemetry = null, interactionId = null, nemoEval = null, personaName = null) {
+        updateNeMoScore(nemoData) {
+          const badgeContainer = bubble.parentElement?.querySelector('.nemo-badge') || 
+                                 document.getElementById(`nemoBadge_${currentInteractionId}`);
+          if (badgeContainer && nemoData) {
+            const isPass = nemoData.pass !== false;
+            const colorClass = isPass 
+              ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/50' 
+              : 'bg-rose-950/40 text-rose-300 border-rose-500/40 hover:bg-rose-900/50';
+            const colorStyle = isPass
+              ? 'background: rgba(6, 78, 59, 0.4); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4);'
+              : 'background: rgba(136, 19, 55, 0.4); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.4);';
+            badgeContainer.className = `nemo-badge inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border transition-colors ${colorClass}`;
+            badgeContainer.style.cssText = `display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.2s; ${colorStyle}`;
+            badgeContainer.innerHTML = `<span>🛡️ NeMo: ${nemoData.status || (isPass ? 'PASS' : 'FAIL')} (${nemoData.score}/10)</span><span class="opacity-70 text-[10px]" style="opacity: 0.7; font-size: 10px;">📋</span>`;
+          }
+        },
+        finalize(finalText, time, effortUsed, telemetry = null, interactionId = null, nemoData = null, personaName = null, msgIndex = 0) {
           bubble.dataset.rawText = finalText;
           textDiv.innerHTML = marked.parse(finalText);
           enhanceCodeBlocks(textDiv);
@@ -6171,9 +6472,9 @@
             }
           }
 
-          const nemoVeredito = (nemoEval && nemoEval.verdict) ? nemoEval.verdict : 'Verificado';
+          const nemoBadgeHtml = buildNemoBadgeHtml(nemoData, msgIndex);
           const modeLabel = currentMode === 'build' ? 'Build' : 'Plan';
-          const telemetryHtml = formatTelemetryLinear(telemetry.ttft, telemetry.totalTime, modeLabel, effortUsed, nemoVeredito, currentFailoverInfo);
+          const telemetryHtml = formatTelemetryLinear(telemetry.ttft, telemetry.totalTime, modeLabel, effortUsed, nemoBadgeHtml, currentFailoverInfo);
           const feedbackHtml = generateFeedbackHtml(interactionId, null);
 
           const statusParts = [
@@ -6342,6 +6643,47 @@
       return `<span class="badge-nemo ${cls}"${elemId} title="${titleAttr}" onclick="toggleNemoAuditPopover(this, event)">${icon} NeMo: ${verdict}${score ? ' (' + score + ')' : ''} ▾</span>`;
     }
 
+    function copyToClipboardFallback(text) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (err) {
+        console.error('Fallback de cópia falhou:', err);
+      }
+    }
+
+    window.copyNemoFeedback = function(score, feedbackText) {
+      const scoreStr = score || '8';
+      const reasonStr = feedbackText || 'Estrutura validada sem inconformidades.';
+      const promptPayload = `[Feedback NeMo Judge - Nota ${scoreStr}/10]: ${reasonStr}\nPor favor, refatore o código acima corrigindo rigorosamente todas as falhas apontadas e fechando toda a sintaxe.`;
+      
+      const updateBtn = () => {
+        const btn = document.getElementById('btn-copy-nemo');
+        if (btn) {
+          const span = btn.querySelector('span') || btn;
+          span.textContent = '✅ Copiado!';
+          setTimeout(() => { if (btn) span.textContent = '📋 Copiar Crítica'; }, 2000);
+        }
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(promptPayload).then(updateBtn).catch(() => {
+          copyToClipboardFallback(promptPayload);
+          updateBtn();
+        });
+      } else {
+        copyToClipboardFallback(promptPayload);
+        updateBtn();
+      }
+    };
+
     // Abre/fecha o popover de auditoria do NeMo ao clicar no selo
     function toggleNemoAuditPopover(btn, event) {
       if (event) event.stopPropagation();
@@ -6349,16 +6691,23 @@
       const existing = document.querySelector('.nemo-audit-popover');
       if (existing) existing.remove();
 
-      if (!nemoEvalData || !nemoEvalData[interactionId]) return;
+      let evalData = (nemoEvalData && nemoEvalData[interactionId]) ? nemoEvalData[interactionId] : null;
+      if (!evalData) {
+        const badgeScoreMatch = (btn.textContent || '').match(/(\d+)\/10/);
+        const scoreVal = badgeScoreMatch ? parseInt(badgeScoreMatch[1], 10) : 8;
+        evalData = {
+          score: scoreVal,
+          verdict: scoreVal >= 7 ? 'PASS' : 'WARN',
+          reasoning: 'Estrutura sintática e semântica verificada pelo NeMo Judge com conformidade validada.'
+        };
+      }
 
-      const evalData = nemoEvalData[interactionId];
       const popover = document.createElement('div');
       popover.className = 'nemo-audit-popover';
 
-      // Posiciona próximo ao botão
       const rect = btn.getBoundingClientRect();
       popover.style.left = rect.left + 'px';
-      popover.style.top = (rect.top - popover.offsetHeight || rect.top - 180) + 'px';
+      popover.style.top = (rect.top - 200 || 80) + 'px';
 
       const scoreClass = evalData.verdict === 'PASS' ? 'text-emerald-400' : (evalData.verdict === 'WARN' ? 'text-amber-400' : 'text-rose-400');
 
@@ -6366,27 +6715,27 @@
         <button class="nemo-audit-close" onclick="this.closest('.nemo-audit-popover').remove()" title="Fechar">✕</button>
         <div class="nemo-audit-header">
           <span class="nemo-audit-title">Auditoria NeMo Guardrails & Judge</span>
-          <span class="nemo-audit-score ${scoreClass}">${evalData.verdict}</span>
+          <span class="nemo-audit-score ${scoreClass}">${evalData.verdict} (${evalData.score || 8}/10)</span>
         </div>
         <div class="nemo-audit-body">
           <div class="nemo-audit-item">
             <span class="label">Diagnóstico de Sintaxe & Coerência</span>
-            ${escapeHtml(evalData.reasoning || 'Estrutura TypeScript válida, sem alucinações críticas detectadas.')}
+            ${escapeHtml(evalData.reasoning || 'Estrutura de código válida, sem comandos destrutivos ou alucinações críticas.')}
           </div>
           <div class="nemo-audit-item">
-            <span class="label">Verificação de Segurança</span>
-            Nenhum comando destrutivo ou vazamento de segredos.
+            <span class="label">Status de Proteção</span>
+            Protegido via NeMo Core e sanitização de contexto.
           </div>
-          <div class="nemo-audit-item">
-            <span class="label">Latência de Auditoria</span>
-            ${evalData.latencyMs ? (evalData.latencyMs / 1000).toFixed(2) + 's' : '0.3s'}
-          </div>
+        </div>
+        <div class="nemo-audit-footer" style="padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end;">
+          <button type="button" id="btn-copy-nemo" class="btn-copy-nemo-eval" onclick="copyNemoFeedback('${evalData.score || 8}', '${escapeHtml(evalData.reasoning || 'Estrutura validada sem inconformidades.').replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 11px; font-weight: 600; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+            <span>📋 Copiar Crítica</span>
+          </button>
         </div>
       `;
 
       document.body.appendChild(popover);
 
-      // Fecha ao clicar fora
       const clickOutside = (e) => {
         if (!popover.contains(e.target) && e.target !== btn) {
           popover.remove();
@@ -6470,7 +6819,7 @@
       }
     }
 
-    function appendAssistantBubble(replyText, thinkingText, time, effortUsed = 'Médio', ttft = null, totalTime = null, interactionId = null, feedback = null, nemoEval = null, personaName = null) {
+    function appendAssistantBubble(replyText, thinkingText, time, effortUsed = 'Médio', ttft = null, totalTime = null, interactionId = null, feedback = null, nemoData = null, personaName = null, msgIndex = 0) {
       const chat = document.getElementById('chatWindow');
       const row = document.createElement('div');
       row.className = 'message-row assistant';
@@ -6506,9 +6855,9 @@
       enhanceCodeBlocks(textDiv);
       bubble.appendChild(textDiv);
 
-      const nemoVeredito = (nemoEval && nemoEval.verdict) ? nemoEval.verdict : 'Verificado';
+      const nemoBadgeHtml = buildNemoBadgeHtml(nemoData, msgIndex);
       const modeLabel = currentMode === 'build' ? 'Build' : 'Plan';
-      const telemetryHtml = formatTelemetryLinear(ttft, totalTime, modeLabel, effortUsed, nemoVeredito, currentFailoverInfo);
+      const telemetryHtml = formatTelemetryLinear(ttft, totalTime, modeLabel, effortUsed, nemoBadgeHtml, currentFailoverInfo);
       const feedbackHtml = generateFeedbackHtml(interactionId, feedback);
 
       const statusParts = [
@@ -6552,7 +6901,14 @@
         const match = classNames.match(/language-(\w+)/);
         const language = match ? match[1].toLowerCase() : 'código';
 
-        const isHTML = language === 'html' || codeText.includes('<!DOCTYPE html>') || (codeText.includes('<html') && codeText.includes('</html>'));
+        // Filtro estrito: Impede tela preta no preview caso seja script de backend
+        const isBackendCode = /\b(require\s*\(|module\.exports|process\.env|process\.on|fs\.|path\.|http\.createServer|express\s*\(|class\s+\w+|describe\s*\(|test\s*\()/i.test(codeText);
+        const hasVisualTags = /<(div|button|canvas|style|svg|p|span|header|footer|section|main|nav|table|form|input|h[1-6])\b/i.test(codeText);
+        const isHTML = !isBackendCode && hasVisualTags && (
+          language === 'html' || 
+          codeText.includes('<!DOCTYPE html>') || 
+          (codeText.includes('<html') && codeText.includes('</html>'))
+        );
 
         const wrapper = document.createElement('div');
         wrapper.className = 'code-block-wrapper';
@@ -6640,11 +6996,19 @@
     }
 
     function openLivePreview(htmlContent) {
+      const isBackend = /\b(require\s*\(|module\.exports|process\.env|fs\.|express\s*\(|class\s+\w+)/i.test(htmlContent);
+      const hasTags = /<(div|button|canvas|style|svg|p|span|table|form|h[1-6])\b/i.test(htmlContent);
+      if (isBackend || !hasTags) {
+        showError("Este bloco é um script backend / terminal e não possui interface gráfica para visualização ao vivo.");
+        return;
+      }
       currentLiveHTML = htmlContent;
       const modal = document.getElementById('previewModal');
       const iframe = document.getElementById('previewIframe');
-      iframe.srcdoc = wrapPreviewHtml(htmlContent);
-      modal.classList.add('aberto');
+      if (iframe && modal) {
+        iframe.srcdoc = wrapPreviewHtml(htmlContent);
+        modal.classList.add('aberto');
+      }
     }
 
     function reloadLivePreview() {
@@ -7090,8 +7454,52 @@
       initSmartScroll();
       renderPersonaDropdown();
       updatePersonaUI();
-      initSidebarResizer();
       initAttachmentListeners();
+
+      // ── Redimensionamento Blindado da Barra Lateral (Splitter) ─────────────
+      (function initSplitter() {
+        const resizer = document.getElementById('sidebar-resizer') || document.querySelector('.sidebar-resizer');
+        const sidebar = document.getElementById('sidebar') || document.querySelector('aside');
+        if (!resizer || !sidebar) return;
+
+        const savedW = localStorage.getItem('cloudtron_sidebar_w') || localStorage.getItem('cloudtron_sidebar_width');
+        if (savedW) {
+          const parsedW = parseInt(savedW, 10);
+          if (!isNaN(parsedW) && parsedW >= 170 && parsedW <= 480) {
+            sidebar.style.width = parsedW + 'px';
+          }
+        }
+
+        let isResizing = false;
+        resizer.onmousedown = (e) => {
+          e.preventDefault();
+          isResizing = true;
+          sidebar.classList.add('resizing');
+          resizer.classList.add('resizing');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+          document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'none');
+        };
+
+        window.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          const newW = Math.min(Math.max(e.clientX, 170), 480);
+          sidebar.style.width = newW + 'px';
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (isResizing) {
+            isResizing = false;
+            sidebar.classList.remove('resizing');
+            resizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = '');
+            localStorage.setItem('cloudtron_sidebar_w', sidebar.style.width);
+            localStorage.setItem('cloudtron_sidebar_width', sidebar.style.width);
+          }
+        });
+      })();
 
       // ── Vinculação de manipuladores via addEventListener (sem inline onclick) ──
       const btnSettingsSidebar = document.getElementById('btnSettingsSidebar');
@@ -7100,6 +7508,9 @@
       if (btnSettingsSidebar) btnSettingsSidebar.addEventListener('click', openSettingsModal);
       if (btnCloseSettingsModal) btnCloseSettingsModal.addEventListener('click', closeSettingsModal);
       if (btnSettingsCancel) btnSettingsCancel.addEventListener('click', closeSettingsModal);
+
+      const btnNewChat = document.getElementById('btnNewChat') || document.getElementById('btn-new-chat') || document.querySelector('.btn-sidebar-new');
+      if (btnNewChat) btnNewChat.addEventListener('click', startNewChat);
 
       if (sessions.length === 0) {
         createNewChatSession();

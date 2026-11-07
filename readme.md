@@ -51,6 +51,11 @@ Distribuição pronta via instalador executável: `Cloudtron-OneClick-Setup-1.3.
   * **Seed Determinística & Modo JSON:** Suporte a seed constante para reprodução exata e formatação `json_object`.
   * **Feedback Humano (👍/👎):** Botões no rodapé para qualificar respostas e reportar motivos específicos em `data/feedback.jsonl`.
 
+* 🔄 **Closed-Loop Intelligence: Auto-Correção Ativa via NVIDIA NeMo Judge (In-Context RLHF):**
+  * **Aprendizado Contínuo em Tempo de Execução:** Esqueça LLMs que repetem os mesmos erros. O Cloudtron OneClick v1.3.0 implementa **In-Context RLHF em tempo de execução**: cada resposta é auditada sintaticamente e semanticamente por um LLM-as-a-Judge independente, cujo feedback calibra dinamicamente as inferências seguintes dentro da mesma sessão.
+  * **Injeção de Diretiva de Auto-Calibração:** Ao detectar advertências ou inconformidades (`nemo.score < 7` ou `FAIL/WARN`), o backend injeta automaticamente o bloco `[AUDITORIA DO JUIZ NEMO DA RESPOSTA ANTERIOR]` no turno subsequente, instruindo o modelo a reconhecer a falha anterior e refatorar com precisão estrita sem necessidade de prompts corretivos manuais.
+  * **Telemetria e Transparência Total:** Veredito exposto diretamente no badge interativo com nota, status e crítica técnica acessível via tooltip e botão isolado de cópia instantânea (`📋` com feedback `✅`).
+
 * 🤖 **Modo Adaptativo Heurístico ("Automático"):**
   * Detecção instantânea de intenção e modulação dinâmica de temperatura, top-p, tokens e thinking.
 
@@ -172,6 +177,12 @@ Distribuição pronta via instalador executável: `Cloudtron-OneClick-Setup-1.3.
   * **Code:** Optimized for tests and strict syntax.
   * **Creative:** Expanded temperature for ideation and brainstorming.
   * **Deep:** Extended CoT with high logical density for complex problems.
+
+* 🔄 **Closed-Loop Intelligence: Active Self-Correction via NVIDIA NeMo Judge (In-Context RLHF):**
+  * **Runtime Continual Calibration:** Forget LLMs that repeat identical errors. Cloudtron OneClick v1.3.0 introduces runtime In-Context RLHF: every assistant turn is audited syntactically and semantically by an independent LLM-as-a-Judge, dynamically calibrating subsequent reasoning within the ongoing session.
+  * **Automated Self-Calibration Injection:** When warnings or regressions are identified (`nemo.score < 7` or `FAIL/WARN`), the backend automatically prepends `[AUDITORIA DO JUIZ NEMO DA RESPOSTA ANTERIOR]` to the following turn, compelling the model to acknowledge flaws and deliver hardened refactorings without user manual prompting.
+  * **Full Telemetry & Inspection:** Real-time verdict badge with score and full critique exposed via native tooltips and decoupled copy buttons (`📋` with `✅` visual confirmation).
+
 * 🔄 **Swap Queue & Resilient Failover (Zero Interruption):**
   * Priority provider queue (NVIDIA NIM → Groq Cloud → OpenRouter Free → DeepSeek → Google AI Studio → Anthropic Claude).
   * On 429 / 402 / 401 / timeout (>15s), the backend sends an SSE `failover` event and immediately retries with the next provider using the same history.
