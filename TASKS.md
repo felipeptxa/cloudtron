@@ -1,25 +1,15 @@
-# TASKS - CLOUDTRON ONECLICK
+# TASKS - CLOUDTRON ONECLICK (v1.4.0)
 
-### TAREFA ATIVA: Fix de Escopo de Variável (ReferenceError: effortTagToDisplay) em sendMessage
+## Estado: [PIPELINE AUTOMATIZADO 100% HOMOLOGADO]
 
-- [ ] **Alvos:** `@app.html` e `@docs/app.html`
-- [ ] **Prioridade:** Bloqueador Crítico (Uncaught ReferenceError no envio de mensagens)
+### Tarefas Concluídas da v1.4.0 (Pipeline Local de 5 Níveis):
+- [x] Configuração de `@playwright/test` e scripts no `@package.json` (`test:unit`, `test:e2e`, `review`, `pipeline`).
+- [x] Orquestrador `@scripts/pipeline-verify.js` executando sequência L4 (diff auditor) -> L3 (unit tests) -> L5 (Playwright).
+- [x] Suíte `@test/e2e/app.spec.js` validando console, sidebar resizer, NeMo clipboard e reset de sessão sem erros.
+- [x] Resolução de warning de saída no reporter HTML (`playwright-report` isolado de `test-results`).
+- [x] Documentação do fluxo multi-agente formalizada no `@AGENTS.md`.
 
-#### 1. Diagnóstico do Problema
-- `Uncaught (in promise) ReferenceError: effortTagToDisplay is not defined at sendMessage ((index):6250:63)`.
-- A variável `effortTagToDisplay` é referenciada na montagem do elemento ou telemetria da mensagem, mas não foi definida no escopo local de `sendMessage`.
+---
 
-#### 2. Especificação da Correção (@app.html e @docs/app.html)
-No início da função `sendMessage`, antes de qualquer uso ou chamada assíncrona, definir defensivamente a variável:
-
-```javascript
-// Garantir fallback e definição de effortTagToDisplay
-const effortTagToDisplay = window.currentEffort || localStorage.getItem('cloudtron_effort') || 'Auto';
-Se houver formatação ou capitalização posterior, garantir que effortTagToDisplay possua valor de fallback caso window.currentEffort seja nulo/indefinido.
-
-3. Critérios de Aceitação
-Enviar mensagens sucessivas no chat sem nenhum disparo de ReferenceError no Console (Ctrl + Shift + I).
-
-A telemetria e o indicador de Effort no rodapé/card continuam exibindo o estado correto.
-
-A suíte npm test passa com 19/19 checks.
+### Próximos Passos (Funcionalidades v1.4.0):
+- [ ] Definir o próximo bloco de features da v1.4.0 (ex.: seleção dinâmica de personas, melhorias no Live Sandbox ou novos fallbacks de API).

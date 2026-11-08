@@ -1,102 +1,65 @@
-# Diretrizes do Projeto Cloudtron OneClick
+# AGENTS.md — DIRETRIZES & PROTOCOLO MULTI-AGENTE (CLOUDTRON ONECLICK v1.4.0)
 
-1. Arquitetura e Portas:
+## 1. O PIPELINE DE ENGENHARIA DE 5 NÍVEIS
 
-   * Servidor HTTP nativo Node.js na porta 3000 em 127.0.0.1.
-   * Electron em main.js comunicando com http://127.0.0.1:3000.
-   * Qualquer fallback de porta em server.js deve manter main.js sincronizado.
-2. Segurança e Estabilidade:
+O desenvolvimento do Cloudtron OneClick opera sob uma esteira estrita e desacoplada em 5 níveis de maturidade, eliminando regressões através de contratos formais e validação contínua:
 
-   * Limitar payloads a 50 MB em /api/parse-file e /api/messages.
-   * Sempre checar res.headersSent antes de invocar res.end() ou res.write().
-   * Nunca usar bind aberto em 0.0.0.0; sempre '127.0.0.1'.
-3. Qualidade:
+```
+┌─────────────────┐       ┌──────────────────────┐       ┌─────────────────────┐
+│  L1: ESTRATEGISTA│ ────> │ L2: ORQUESTRADOR LÓG.│ ────> │  L3: CONSTRUTOR     │
+│    (Gemini Gem) │       │    (Antigravity)     │       │    (OpenCode)       │
+└─────────────────┘       └──────────────────────┘       └──────────┬──────────┘
+                                                                    │
+                                                                    ▼
+                                                         ┌─────────────────────┐
+                                                         │ L4: REVISOR CEGO    │
+                                                         │ (pipeline-verify.js)│
+                                                         └──────────┬──────────┘
+                                                                    │
+                                                                    ▼
+                                                         ┌─────────────────────┐
+                                                         │ L5: VALIDADOR E2E   │
+                                                         │  (Playwright E2E)   │
+                                                         └─────────────────────┘
+```
 
-   * Todo refactor DEVE passar na suíte test/suite.js (npm test) com 19/19 checks.
+---
 
+### Papéis e Responsabilidades:
 
+1. **NÍVEL 1: ESTRATEGISTA (Gemini Gem)**
+   - **Função:** Visão de produto, UX/UI, diagnóstico de bugs e priorização de arquitetura.
+   - **Entrega:** Alimenta e atualiza exclusivamente o `TASKS.md` com requisitos inequívocos, causas-raiz e critérios de aceitação.
+   - **Restrição:** Não gera código direto para o disco.
 
-\# AGENTS.md - DIRETRIZES \& PROTOCOLO MULTI-AGENTE (CLOUDTRON ONECLICK)
+2. **NÍVEL 2: ORQUESTRADOR LÓGICO & ENGENHEIRO DE SOFTWARE (Antigravity)**
+   - **Função:** Leitura do `TASKS.md`, inspeção estrutural de contratos, árvore do DOM e seletores. Planeja a arquitetura lógica e gera blocos cirúrgicos e funções puras prontas para aplicação.
+   - **Entrega:** Blocos de código 100% prontos e sanitizados em Markdown na resposta para o operador repassar ao Nível 3.
+   - **RESTRIÇÃO INEGOCIÁVEL:** NUNCA edita arquivos no disco, NUNCA executa scripts de terminal, NUNCA roda testes e NUNCA faz commits. O acesso físico ao filesystem é prerrogativa do Nível 3.
 
+3. **NÍVEL 3: CONSTRUTOR / EXECUTOR (OpenCode)**
+   - **Função:** Aplica os patches de código fornecidos pelo Nível 2 nos arquivos do workspace.
+   - **Entrega:** Gravação física no disco e disparo autônomo do pipeline unificado via `npm run pipeline`.
+   - **Regra de Higiene:** Executa obrigatoriamente `/clear` após a validação para evitar vazamento de contexto entre tarefas.
 
+4. **NÍVEL 4: REVISOR CEGO (Script Automatizado / Diff Auditor)**
+   - **Função:** Integrado em `scripts/pipeline-verify.js`. Realiza análise estática automatizada do `git diff`, verifica integridade de arquivos vitais (`server.js`, `app.html`), inspeciona profundidade de CSS e bloqueia inclusão de arquivos temporários (`.tmp`, `.log`, `.bak`).
+   - **Critério de Saída:** Aborta a execução com `exit(1)` imediatamente caso detecte quebras de contrato.
 
-\## 1. PAPÉIS E RESPONSABILIDADES DO PIPELINE
+5. **NÍVEL 5: VALIDADOR FUNCIONAL E2E (Playwright Runner)**
+   - **Função:** Executa a bateria de testes de ponta a ponta em Chromium headless (`npm run test:e2e`).
+   - **Critérios Auditados:** Console limpo (zero `ReferenceError`), responsividade e persistência do splitter da barra lateral, desacoplamento de payload do NeMo e sanidade de reset de sessão.
 
+---
 
+## 2. DIRETRIZES TÉCNICAS E ARQUITETURA INEGOCIÁVEIS
 
-\- \*\*NÍVEL 1: ESTRATEGISTA (Gemini Gem)\*\*
+### Arquitetura e Rede:
+- Servidor HTTP nativo Node.js obrigatoriamente na porta 3000 em `127.0.0.1`. NUNCA usar bind aberto em `0.0.0.0`.
+- Electron em `main.js` comunicando exclusivamente com `http://127.0.0.1:3000`.
+- Payloads limitados a 50 MB em `/api/parse-file` e `/api/messages`.
+- Sempre checar `if (!res.headersSent)` antes de invocar `res.end()` ou `res.write()`.
+- Streams SSE devem utilizar decodificação em buffer com `lines.pop()` para evitar fragmentação de JSON.
 
-&#x20; - Visão de produto, UX/UI, diagnóstico de prints de DevTools/terminal e bugs.
-
-&#x20; - Alimenta o @TASKS.md com requisitos claros, causas-raiz e critérios de aceitação.
-
-&#x20; - Não gera código direto para o disco.
-
-
-
-\- \*\*NÍVEL 2: ORQUESTRADOR (Antigravity)\*\*
-
-&#x20; - Lê o @TASKS.md e assume automaticamente o papel de Nível 2.
-
-&#x20; - Projeta a arquitetura lógica, valida tipos/contratos e entrega funções e blocos de código prontos e sanitizados.
-
-&#x20; - Regra: NUNCA executa comandos de escrita direta no HD.
-
-
-
-\- \*\*NÍVEL 3: CONSTRUTOR / EXECUTOR (OpenCode)\*\*
-
-&#x20; - Lê a tarefa ativa do @TASKS.md e opera estritamente em modo Build.
-
-&#x20; - Aplica patches físicos no disco e executa 'npm test'.
-
-&#x20; - Regra de higiene: Roda '/clear' imediatamente após cada ciclo para preservar tokens de contexto.
-
-
-
-\---
-
-
-
-\## 2. DIRETRIZES TÉCNICAS E ARQUITETURA (OBRIGATÓRIO PARA NÍVEL 2 E NÍVEL 3)
-
-
-
-\### Arquitetura e Portas:
-
-\- Servidor HTTP nativo Node.js na porta 3000 obrigatoriamente em `127.0.0.1`.
-
-\- Electron em `main.js` comunicando exclusivamente com `http://127.0.0.1:3000`.
-
-\- Qualquer lógica de fallback de porta em `server.js` deve manter o `main.js` sincronizado.
-
-
-
-\### Segurança e Estabilidade:
-
-\- Limitar payloads a 50 MB em `/api/parse-file` e `/api/messages`.
-
-\- Sempre checar `if (!res.headersSent)` antes de invocar `res.end()` ou `res.write()`.
-
-\- NUNCA usar bind aberto em `0.0.0.0`; manter estritamente `127.0.0.1`.
-
-\- Streams SSE devem sempre usar buffers com `lines.pop()` para evitar erro de JSON fragmentado.
-
-
-
-\### Qualidade e Validação:
-
-\- Todo refactor DEVE passar na suíte `test/suite.js` (`npm test`) com 19/19 checks aprovados.
-
-- **NÍVEL 2: ORQUESTRADOR (Antigravity)**
-  - Função: Leitura do @TASKS.md, validação de contratos, definição de arquitetura lógica e estruturação de funções/código.
-  - Entrega: Especificações técnicas e blocos de código formatados em Markdown na resposta para o operador repassar ao Nível 3.
-  - RESTRIÇÃO INEGOCIÁVEL: NUNCA crie arquivos temporários, NUNCA edite arquivos no disco, NUNCA execute npm test/scripts e NUNCA execute git commit/push. O acesso físico ao filesystem é prerrogativa exclusiva do Nível 3.
-
-- **NÍVEL 3: CONSTRUTOR / EXECUTOR (OpenCode)**
-  - Função: Receber os blocos do Nível 2 baseados no @TASKS.md e operar estritamente em modo Build.
-  - Entrega: Aplicação física de patches nos arquivos, execução da suíte 'npm test', verificação de regressões e limpeza obrigatória com '/clear'.
-
-- **DIRETRIZ DE RIGOR TÉCNICO (NÍVEL 2 E NÍVEL 3):**
-  - **Nível 2 (Orquestrador):** É OBRIGATÓRIO inspecionar a árvore do DOM e os seletores existentes no `@app.html` antes de gerar especificações. Nunca introduzir IDs inexistentes.
-  - **Nível 3 (Construtor):** Antes de executar `/clear`, verifique com diff se o código foi injetado sem duplicar funções e execute a validação física via `npm test` garantindo 19/19 checks aprovados.
+### Qualidade e Homologação:
+- Nenhuma tarefa é considerada concluída sem que o comando `npm run pipeline` retorne código de saída `0` com 100% dos checks unitários e testes E2E aprovados.

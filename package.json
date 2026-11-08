@@ -1,6 +1,6 @@
 {
     "name": "cloudtron-oneclick",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Cloudtron Desktop AI Engine com NVIDIA NIM",
     "main": "main.js",
     "repository": {
@@ -11,7 +11,11 @@
     "scripts": {
         "start": "electron .",
         "dist": "electron-builder --win",
-        "test": "node test/suite.js"
+        "test": "node test/suite.js",
+        "test:unit": "node test/suite.js",
+        "test:e2e": "playwright test",
+        "review": "node scripts/pipeline-verify.js --stage review",
+        "pipeline": "node scripts/pipeline-verify.js --all"
     },
     "build": {
         "appId": "com.felipemonroe.cloudtron",
@@ -44,11 +48,14 @@
         "nvidia",
         "nemotron",
         "desktop",
-        "ai"
+        "ai",
+        "playwright",
+        "pipeline"
     ],
     "author": "Felipe Monroe",
     "license": "MIT",
     "devDependencies": {
+        "@playwright/test": "^1.48.0",
         "electron": "^45.2.3",
         "electron-builder": "^26.0.2"
     },

@@ -6,3 +6,7 @@ dist/
 data/
 
 opencode.json
+
+# Artefatos de Teste e Relatórios E2E
+test-results/
+playwright-report/
