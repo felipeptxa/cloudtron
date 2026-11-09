@@ -37,41 +37,47 @@ DIRETRIZES TÉCNICAS:
 - Live Preview: Código Node.js puro DEVE usar estritamente blocos \`\`\`javascript. NUNCA utilize \`\`\`html para scripts de backend.
 - Auditoria NeMo: Suas respostas são avaliadas de 1 a 10 por um auditor interno. Respostas truncadas recebem FAIL.`;
 
-// ── Fila de Prioridade de Provedores (Failover Automático) ────────────────────
-// Ordem de tentativa quando o provedor ativo falha (429, 402, 401 ou timeout).
-// As chaves são lidas do corpo da requisição (providerApiKeys) ou do ambiente (.env).
+// ── Fila de Prioridade de Provedores (Cascading Failover & Rate-Limit Shield) ─
+// Cascata automática acionada em caso de HTTP 429 (Rate Limit), 5xx, timeout ou erro de rede.
+// Ordem de prioridade: NVIDIA NIM ➔ Groq ➔ OpenRouter ➔ DeepSeek ➔ Google ➔ Anthropic.
 const PROVIDER_FAILOVER_QUEUE = [
   {
+    id: 'nvidia',
     name: 'NVIDIA NIM',
     endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
     envKey: 'NVIDIA_API_KEY',
     defaultModel: 'nvidia/nemotron-3.5-super-vl-120b-a12b'
   },
   {
+    id: 'groq',
     name: 'Groq Cloud',
     endpoint: 'https://api.groq.com/openai/v1/chat/completions',
     envKey: 'GROQ_API_KEY',
-    defaultModel: 'deepseek-r1-distill-llama-70b'
+    defaultModel: 'llama-3.3-70b-versatile'
   },
   {
+    id: 'openrouter',
     name: 'OpenRouter Free',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     envKey: 'OPENROUTER_API_KEY',
-    defaultModel: 'deepseek/deepseek-r1-distill-llama-70b:free'
+    defaultModel: 'meta-llama/llama-3.3-70b-instruct:free'
   },
   {
+    id: 'deepseek',
     name: 'DeepSeek Oficial',
     endpoint: 'https://api.deepseek.com/chat/completions',
     envKey: 'DEEPSEEK_API_KEY',
     defaultModel: 'deepseek-chat'
   },
   {
+    id: 'google',
     name: 'Google AI Studio',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent',
     envKey: 'GOOGLE_AI_STUDIO_API_KEY',
     defaultModel: 'gemini-1.5-pro'
   },
   {
+    id: 'anthropic',
     name: 'Anthropic Claude',
     endpoint: 'https://api.anthropic.com/v1/messages',
     envKey: 'ANTHROPIC_API_KEY',
@@ -79,7 +85,7 @@ const PROVIDER_FAILOVER_QUEUE = [
   }
 ];
 
-// Tempo máximo (ms) aguardando o primeiro token de cada provedor antes de fazer failover.
+// Tempo máximo (ms) aguardando o primeiro chunk de cada provedor antes de acionar failover.
 const PROVIDER_TIMEOUT_MS = 15000;
 
 // Tempo máximo (ms) da sessão inteira de streaming.
@@ -1086,21 +1092,25 @@ const server = http.createServer((req, res) => {
         accumulatedResponseText = '';
         chunkCount = 0;
         ttft_ms = 0;
+        let attemptIndex = 0;
+        const primaryProviderName = 'NVIDIA NIM';
 
-        // ── Loop de Failover sobre a fila de provedores ────────────────────────
+        // ── Loop de Failover em Cascata sobre a Fila de Provedores ────────────
         for (const provider of PROVIDER_FAILOVER_QUEUE) {
-          // Resolve a chave do provedor via resolvedor unificado (payload > header bearer > .env)
+          // Resolve a chave do provedor (payload > header bearer > .env)
           const providerKey = resolveProviderApiKey(provider, providerApiKeys, clientKey);
           if (!providerKey) {
             console.log(`[FAILOVER] ⏩ ${provider.name}: credencial ausente, avançando para o próximo.`);
+            attemptIndex++;
             continue;
           }
 
-          // Modelo do provedor (usa o do cliente se for o NVIDIA, senão o default do provedor)
+          // Mapeamento do modelo: mantém o especificado pelo usuário se for o primário, senão usa o padrão equivalente
           const providerModel = (typeof clientData.model === 'string' && clientData.model.trim() && provider.name === 'NVIDIA NIM')
             ? clientData.model.trim()
             : provider.defaultModel;
 
+          // 100% do payload original preservado (incluindo diretivas NeMo RLHF)
           const providerPayload = {
             model: providerModel,
             messages: sanitizedMessages,
@@ -1110,31 +1120,29 @@ const server = http.createServer((req, res) => {
             stream: true
           };
 
-          // Adapta campos específicos por provedor
+          // Adaptações específicas por provedor (OpenAI-compatible)
           if (provider.name === 'NVIDIA NIM') {
             providerPayload.chat_template_kwargs = { enable_thinking: isThinking };
             if (seed !== null) providerPayload.seed = seed;
-          }
-          if (provider.name === 'Groq Cloud') {
-            // Groq usa o formato OpenAI padrão; thinking via temperature/top_p
           }
           if (clientData.response_format && typeof clientData.response_format === 'object') {
             providerPayload.response_format = clientData.response_format;
           }
 
-          console.log(`[PROXY] → Tentando ${provider.name} (${providerModel} | thinking: ${isThinking} | temp: ${temperature} | top_p: ${top_p} | tokens: ${max_tokens})...`);
+          console.log(`[PROXY] → Tentando [${attemptIndex + 1}/${PROVIDER_FAILOVER_QUEUE.length}] ${provider.name} (${providerModel})...`);
 
           let providerRes;
+          const providerCtrl = new AbortController();
+          const providerTid = setTimeout(() => providerCtrl.abort(), PROVIDER_TIMEOUT_MS);
+
           try {
-            const providerCtrl = new AbortController();
-            const providerTid = setTimeout(() => providerCtrl.abort(), PROVIDER_TIMEOUT_MS);
             providerRes = await fetch(provider.endpoint, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${providerKey}`,
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
-                'User-Agent': 'Cloudtron-OneClick/1.3.0'
+                'User-Agent': 'Cloudtron-OneClick/1.4.0'
               },
               body: JSON.stringify(providerPayload),
               signal: providerCtrl.signal
@@ -1142,36 +1150,32 @@ const server = http.createServer((req, res) => {
             clearTimeout(providerTid);
           } catch (fetchErr) {
             clearTimeout(providerTid);
-            if (fetchErr.name === 'AbortError') {
-              console.warn(`[FAILOVER] ${provider.name}: timeout após ${PROVIDER_TIMEOUT_MS / 1000}s.`);
-              sendFailoverEvent(res, provider.name, 'Próximo provedor', `Timeout (${PROVIDER_TIMEOUT_MS / 1000}s)`);
-              continue;
-            }
-            console.error(`[ERRO FETCH ${provider.name}]:`, fetchErr.message);
-            sendFailoverEvent(res, provider.name, 'Próximo provedor', `Erro de conexão`);
+            const isTimeout = fetchErr.name === 'AbortError';
+            const reason = isTimeout ? `Timeout (${PROVIDER_TIMEOUT_MS / 1000}s)` : `Erro de conexão (${fetchErr.message})`;
+            console.warn(`[FAILOVER] ⚠️ ${provider.name}: ${reason}. Cascata acionada.`);
+            sendFailoverEvent(res, provider.name, 'Próximo provedor', reason);
+            attemptIndex++;
             continue;
           }
 
+          // Trata códigos de erro que devem disparar failover imediato
           if (!providerRes.ok) {
-            let errMsg = `Erro ${provider.name} HTTP ${providerRes.status}`;
+            let errMsg = `HTTP ${providerRes.status}`;
             try {
               const errData = await providerRes.json();
               errMsg = errData.error?.message || errData.message || errData.detail || JSON.stringify(errData);
             } catch (_) {
               const errBody = await providerRes.text().catch(() => '');
-              if (errBody) errMsg = errBody.substring(0, 300);
+              if (errBody) errMsg = errBody.substring(0, 200);
             }
-            console.error(`[ERRO ${provider.name} API]: HTTP ${providerRes.status} ${providerRes.statusText} - ${errMsg}`);
-            // 429 rate limit, 402 quota, 401 chave inválida → dispara failover
-            if (providerRes.status === 429 || providerRes.status === 402 || providerRes.status === 401) {
-              sendFailoverEvent(res, provider.name, 'Próximo provedor', `HTTP ${providerRes.status}`);
-            } else {
-              sendFailoverEvent(res, provider.name, 'Próximo provedor', `HTTP ${providerRes.status}`);
-            }
+
+            console.error(`[FAILOVER] ⚠️ ${provider.name} retornou HTTP ${providerRes.status} (${errMsg}). Chaveando...`);
+            sendFailoverEvent(res, provider.name, 'Próximo provedor', `HTTP ${providerRes.status}`);
+            attemptIndex++;
             continue;
           }
 
-          // ── Sucesso: iniciamos o streaming deste provedor ────────────────────
+          // ── Sucesso: Emite o evento provider_meta e inicia streaming ────────
           finalModelUsed = providerModel;
           finalEffort = clientData.effort || 'auto';
           finalProfile = clientData.profile || 'Auto';
@@ -1181,7 +1185,21 @@ const server = http.createServer((req, res) => {
           finalThinking = isThinking;
           finalSeed = seed;
 
-          // Reset seguro de buffer antes do streaming do provedor selecionado
+          const isFailover = (attemptIndex > 0) || (provider.name !== primaryProviderName);
+
+          // Telemetria estruturada do provedor ativo para o cliente
+          const providerMetaEvent = {
+            type: 'provider_meta',
+            provider: provider.name,
+            failover: isFailover,
+            original: primaryProviderName,
+            model: providerModel
+          };
+
+          if (!res.writableEnded) {
+            res.write(`data: ${JSON.stringify(providerMetaEvent)}\n\n`);
+          }
+
           chunkCount = 0;
           ttft_ms = 0;
           accumulatedResponseText = '';
@@ -1192,11 +1210,10 @@ const server = http.createServer((req, res) => {
               chunkCount++;
               if (chunkCount === 1) {
                 ttft_ms = Date.now() - startTime;
-                console.log(`[PROXY] ⚡ Primeiro chunk de streaming recebido em ${ttft_ms}ms (${provider.name})!`);
+                console.log(`[PROXY] ⚡ Primeiro chunk recebido em ${ttft_ms}ms de ${provider.name}! (Failover: ${isFailover})`);
               }
               if (!res.writableEnded) res.write(chunk);
 
-              // Decodifica e acumula resposta garantindo tolerância a falhas de parsing
               const decoded = textDecoder.decode(chunk, { stream: true });
               const lines = decoded.split('\n');
               for (const line of lines) {
@@ -1212,15 +1229,15 @@ const server = http.createServer((req, res) => {
                 }
               }
             }
-            // Streaming concluído com sucesso neste provedor
             overallSuccess = true;
             break;
           } catch (streamErr) {
             if (streamErr.name !== 'AbortError') {
               console.error(`[ERRO STREAM ${provider.name}]:`, streamErr.message);
               accumulatedResponseText = '';
-              sendFailoverEvent(res, provider.name, 'Próximo provedor', 'Erro no stream');
+              sendFailoverEvent(res, provider.name, 'Próximo provedor', 'Interrupção no stream');
             }
+            attemptIndex++;
             continue;
           }
         }

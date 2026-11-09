@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloudtron OneClick v1.3.0</title>
+  <title>Cloudtron OneClick v1.4.0</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -3099,7 +3099,7 @@
             <span class="brand-clautron">Cloudtron</span>
             <span class="brand-oneclick">OneClick</span>
           </div>
-          <span class="sidebar-brand-tag" id="sidebarBrandVersionTag">v1.3.0</span>
+          <span class="sidebar-brand-tag" id="sidebarBrandVersionTag">v1.4.0</span>
         </div>
       </div>
 
@@ -3150,7 +3150,7 @@
       </button>
       <div class="sidebar-footer-info">
         <span class="sidebar-app-name">Cloudtron OneClick</span>
-        <span class="sidebar-app-ver" id="sidebarVersionLabel">v1.3.0</span>
+        <span class="sidebar-app-ver" id="sidebarVersionLabel">v1.4.0</span>
         </div>
       </div>
       <button class="sidebar-update-pill" id="sidebarUpdatePill" onclick="openUpdateModal()" style="display: none;" title="Clique para ver a nova versão">
@@ -3179,7 +3179,7 @@
               <circle cx="20" cy="20" r="4" fill="#2dd4bf" />
             </svg>
           </div>
-          <span class="app-brand-title"><strong>Cloudtron</strong> <span style="font-weight: 300;">OneClick v1.3.0</span></span>
+          <span class="app-brand-title"><strong>Cloudtron</strong> <span style="font-weight: 300;">OneClick v1.4.0</span></span>
         </div>
       </div>
 
@@ -5358,15 +5358,56 @@
       return '';
     }
 
-    function formatTelemetryLinear(ttft, totalTime, mode, effort, nemoBadgeHtml, failoverInfo) {
+    function formatTelemetryLinear(ttft, totalTime, mode, effort, nemoBadgeHtml, failoverInfo, providerMeta) {
       const ttftSec = (ttft / 1000).toFixed(2);
       const totalSec = (totalTime / 1000).toFixed(1);
+      const ttftMs = Math.round(ttft || 0);
       const parts = [`⚡ TTFT: ${ttftSec}s | Total: ${totalSec}s`];
+
+      // Exibição do Provedor Ativo e Badge de Contingência (Multi-Provider Telemetry)
+      const meta = providerMeta || window.activeProviderMeta;
+      if (meta) {
+        if (meta.failover) {
+          parts.push(`• <span style="color: #fbbf24; font-weight: 600;">⚠️ ${escapeHtml(meta.provider || 'Contingência')} (Failover Ativo) • ${ttftMs}ms</span>`);
+        } else {
+          parts.push(`• <span style="color: #94a3b8;">${escapeHtml(meta.provider || 'NVIDIA NIM')} • ${ttftMs}ms</span>`);
+        }
+      } else if (failoverInfo) {
+        parts.push(`• 🔄 Failover: ${escapeHtml(failoverInfo.to)} ${failoverInfo.from ? '(' + failoverInfo.from + ')' : ''}`);
+      }
+
       if (mode) parts.push(`• Mode: ${mode}`);
       if (effort) parts.push(`• Effort: ${effort}`);
       if (nemoBadgeHtml) parts.push(`• ${nemoBadgeHtml}`);
-      if (failoverInfo) parts.push(`• 🔄 Failover: ${failoverInfo.to} ${failoverInfo.from ? '(' + failoverInfo.from + ')' : ''}`);
       return parts.join(' ');
+    }
+
+    // ── Atualizador do Indicador de Provedor Ativo (Multi-Provider Telemetry) ──
+    function updateActiveProviderBadge(providerName, isFailover, origProvider) {
+      // 1. Atualiza o indicador no sub-header
+      const subHeaderTag = document.getElementById('subHeaderModelTag');
+      if (subHeaderTag) {
+        if (isFailover) {
+          subHeaderTag.innerHTML = `<span style="color: #f59e0b; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">⚠️ ${escapeHtml(providerName)} <span style="font-size: 10px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 1px 5px; border-radius: 4px;">Failover Ativo</span></span>`;
+        } else {
+          subHeaderTag.textContent = providerName;
+          subHeaderTag.style.color = '#475569';
+        }
+      }
+
+      // 2. Atualiza o LED de diagnóstico no cabeçalho
+      const statusLed = document.getElementById('headerStatusLed');
+      if (statusLed) {
+        if (isFailover) {
+          statusLed.style.background = '#f59e0b';
+          statusLed.style.boxShadow = '0 0 8px #f59e0b';
+          statusLed.title = `Failover Ativo: Conectado via ${providerName} (Original: ${origProvider})`;
+        } else {
+          statusLed.style.background = '#10b981';
+          statusLed.style.boxShadow = '0 0 6px #10b981';
+          statusLed.title = `${providerName}: Conectado e Operacional`;
+        }
+      }
     }
 
     function renderSidebar() {
@@ -5962,6 +6003,7 @@
       let accumulatedThinking = '';
       let accumulatedAnswer = '';
       currentFailoverInfo = null;
+      window.activeProviderMeta = null;
 
       try {
         const payloadMessages = session.messages.map(m => ({
@@ -6093,6 +6135,23 @@
             if (parsed.__clautron_interaction_id) {
               currentInteractionId = parsed.__clautron_interaction_id;
               window.currentInteractionId = currentInteractionId;
+            }
+
+            // Evento de Telemetria de Provedor Ativo (Multi-Provider Cascading Failover)
+            if (parsed.type === 'provider_meta') {
+              window.activeProviderMeta = parsed;
+              const providerName = parsed.provider || 'NVIDIA NIM';
+              const isFailover = !!parsed.failover;
+              const origProvider = parsed.original || 'NVIDIA';
+
+              currentFailoverInfo = isFailover ? {
+                from: origProvider,
+                to: providerName,
+                reason: 'Failover Ativo'
+              } : null;
+
+              updateActiveProviderBadge(providerName, isFailover, origProvider);
+              return;
             }
 
             // Evento dedicado NeMo Eval com atualização de state e persistência imediata
@@ -7326,7 +7385,7 @@
     }
 
 
-    const FALLBACK_VERSION = "1.3.0";
+    const FALLBACK_VERSION = "1.4.0";
     const GITHUB_REPO = "felipeptxa/cloudtron";
     let latestReleaseInfo = null;
 
