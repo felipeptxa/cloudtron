@@ -964,15 +964,21 @@ const server = http.createServer((req, res) => {
         const clientMode = (typeof clientData.mode === 'string' && clientData.mode.toLowerCase() === 'build') ? 'build' : 'plan';
         const modeDirective = (clientMode === 'build') ? BUILD_SYSTEM_DIRECTIVE : PLAN_SYSTEM_DIRECTIVE;
 
-        // 2. Extração das regras de sistema customizadas fornecidas pelo usuário
+        // 2. Extração da diretiva do agente ativo do Squad (Paperclip Fase 1)
+        const activeRoleDirective = (typeof clientData.activeRoleDirective === 'string' && clientData.activeRoleDirective.trim())
+          ? clientData.activeRoleDirective.trim()
+          : '';
+
+        // 3. Extração das regras de sistema customizadas fornecidas pelo usuário
         const userSystem = (typeof clientData.system_prompt === 'string' && clientData.system_prompt.trim())
           ? clientData.system_prompt.trim()
           : (typeof clientData.system === 'string' && clientData.system.trim() ? clientData.system.trim() : '');
 
-        // 3. Concatenação do Prompt Mestre: CLOUDTRON_CORE_SYSTEM + Modo + Regras do Usuário
+        // 4. Concatenação do Prompt Mestre: CLOUDTRON_CORE_SYSTEM + Modo + Agente Ativo + Regras do Usuário
         const promptConsolidado = [
           CLOUDTRON_CORE_SYSTEM,
           modeDirective,
+          activeRoleDirective ? `[DIRETRIZ DE PAPEL / AGENTE ATIVO]\n${activeRoleDirective}` : '',
           userSystem ? `REGRAS DO USUÁRIO:\n${userSystem}` : ''
         ].filter(Boolean).join('\n\n');
 
@@ -1093,10 +1099,41 @@ const server = http.createServer((req, res) => {
         chunkCount = 0;
         ttft_ms = 0;
         let attemptIndex = 0;
-        const primaryProviderName = 'NVIDIA NIM';
 
-        // ── Loop de Failover em Cascata sobre a Fila de Provedores ────────────
-        for (const provider of PROVIDER_FAILOVER_QUEUE) {
+        // ── Resolução Dinâmica da Fila de Provedores (Frente A) ───────────────
+        const requestedPriority = Array.isArray(clientData.providerPriority) ? clientData.providerPriority : [];
+        let resolvedQueue = [];
+
+        if (requestedPriority.length > 0) {
+          for (const pid of requestedPriority) {
+            if (!pid || typeof pid !== 'string') continue;
+            const norm = pid.trim().toLowerCase();
+            const match = PROVIDER_FAILOVER_QUEUE.find(p => p.id.toLowerCase() === norm || p.name.toLowerCase().includes(norm));
+            if (match && !resolvedQueue.some(item => item.id === match.id)) {
+              resolvedQueue.push(match);
+            }
+          }
+          // Garante que provedores não citados pelo cliente permaneçam ao final da fila como fallback
+          for (const p of PROVIDER_FAILOVER_QUEUE) {
+            if (!resolvedQueue.some(item => item.id === p.id)) {
+              resolvedQueue.push(p);
+            }
+          }
+        } else {
+          resolvedQueue = [...PROVIDER_FAILOVER_QUEUE];
+        }
+
+        // Filtra estritamente apenas provedores que possuam credencial configurada
+        const activeQueueWithKeys = resolvedQueue.filter(p => {
+          const key = resolveProviderApiKey(p, providerApiKeys, clientKey);
+          return typeof key === 'string' && key.trim().length > 0;
+        });
+
+        const executionQueue = activeQueueWithKeys.length > 0 ? activeQueueWithKeys : resolvedQueue;
+        const primaryProviderName = executionQueue[0] ? executionQueue[0].name : 'NVIDIA NIM';
+
+        // ── Loop de Failover em Cascata sobre a Fila Dinâmica ─────────────────
+        for (const provider of executionQueue) {
           // Resolve a chave do provedor (payload > header bearer > .env)
           const providerKey = resolveProviderApiKey(provider, providerApiKeys, clientKey);
           if (!providerKey) {
@@ -1105,8 +1142,8 @@ const server = http.createServer((req, res) => {
             continue;
           }
 
-          // Mapeamento do modelo: mantém o especificado pelo usuário se for o primário, senão usa o padrão equivalente
-          const providerModel = (typeof clientData.model === 'string' && clientData.model.trim() && provider.name === 'NVIDIA NIM')
+          // Mapeamento do modelo: respeita a escolha do usuário no primário e aplica defaults nos fallbacks
+          const providerModel = (typeof clientData.model === 'string' && clientData.model.trim() && provider.name === primaryProviderName)
             ? clientData.model.trim()
             : provider.defaultModel;
 

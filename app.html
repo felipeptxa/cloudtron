@@ -3047,6 +3047,198 @@
       box-shadow: 0 0 6px #ef4444;
     }
 
+    /* ── Estilos da Reordenação de Failover (Frente A) ── */
+    .failover-priority-box {
+      margin-top: 14px;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 8px;
+    }
+    .failover-priority-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .failover-item-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: #090e1a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .failover-item-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .failover-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-priority-arrow {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-priority-arrow:hover:not(:disabled) {
+      background: #38bdf8;
+      color: #04070f;
+    }
+    .btn-priority-arrow:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .provider-status-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .provider-status-badge.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .provider-status-badge.disabled {
+      background: rgba(100, 116, 139, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(100, 116, 139, 0.3);
+    }
+
+    /* ── Estilos da Matriz de Agentes (Frente B) ── */
+    .squad-agents-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .squad-agent-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .squad-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .squad-input-inline {
+      background: #090e1a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 4px 8px;
+      color: #f8fafc;
+      font-size: 12px;
+      outline: none;
+    }
+    .squad-agent-directive {
+      width: 100%;
+      min-height: 54px;
+      font-size: 11px;
+      background: #090e1a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 6px;
+      color: #cbd5e1;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    /* ── Dropdown do Seletor de Agente no Chat Input ── */
+    .agent-squad-selector {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .agent-squad-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 20px;
+      color: #e9d5ff;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .agent-squad-toggle:hover {
+      background: rgba(168, 85, 247, 0.25);
+      border-color: rgba(168, 85, 247, 0.6);
+    }
+    .agent-squad-menu {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 0;
+      width: 250px;
+      padding: 8px;
+      background: #0b1222;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 12px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 1300;
+      backdrop-filter: blur(12px);
+    }
+    .agent-squad-menu.open {
+      display: flex;
+    }
+    .agent-squad-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: #cbd5e1;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
+    }
+    .agent-squad-option:hover {
+      background: #1e293b;
+    }
+    .agent-squad-option.active {
+      background: rgba(168, 85, 247, 0.2);
+      color: #f3e8ff;
+      font-weight: 600;
+    }
+
+    /* ── Botão Handoff no Rodapé da Mensagem ── */
+    .btn-handoff-msg {
+      background: rgba(168, 85, 247, 0.12) !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+      color: #d8b4fe !important;
+    }
+    .btn-handoff-msg:hover {
+      background: rgba(168, 85, 247, 0.25) !important;
+      color: #ffffff !important;
+    }
+
 </style>
 </head>
 <body>
@@ -3281,6 +3473,18 @@
             </div>
           </div>
 
+          <!-- Seletor Rápido de Agente do Squad (Paperclip Fase 1) -->
+          <div class="agent-squad-selector" id="agentSquadSelector">
+            <button type="button" class="agent-squad-toggle" id="agentSquadToggle" onclick="toggleAgentSquadDropdown(event)" title="Selecionar agente ativo do squad">
+              <span id="activeAgentAvatar">🏛️</span>
+              <span id="activeAgentName">Arquiteto L1-L2</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="agent-squad-menu" id="agentSquadMenu" role="listbox" aria-label="Agente Ativo do Squad">
+              <!-- Renderizado dinamicamente via renderAgentSquadDropdown() -->
+            </div>
+          </div>
+
           <textarea id="promptInput" placeholder="Pergunte, planeje ou comande uma tarefa (Ctrl+V para colar imagens)..." onkeydown="handleKey(event)" oninput="autoResizePrompt(this)"></textarea>
           
           <button class="btn-send" id="sendBtn" onclick="handleSendOrStop()" title="Enviar mensagem">
@@ -3390,6 +3594,24 @@
             Configure as chaves de API para cada provedor. As chaves são armazenadas apenas no <strong>localStorage local</strong> e nunca são enviadas a logs nem a terceiros.
             As chaves configuradas são usadas na Fila de Swap/Failover automática quando o provedor primário falha.
           </p>
+
+          <!-- Ordem de Prioridade do Failover (Frente A) -->
+          <div class="failover-priority-box">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px;">
+                ⚡ Ordem de Prioridade do Failover
+              </span>
+              <button type="button" class="btn-priority-arrow" onclick="resetFailoverPriorityToDefault()" title="Restaurar fila padrão">
+                ↺ Padrão
+              </button>
+            </div>
+            <p style="font-size: 11px; color: #94a3b8; margin: 4px 0 8px 0;">
+              Em caso de Rate Limit (HTTP 429) ou instabilidade, o Cloudtron aciona os provedores na sequência abaixo:
+            </p>
+            <div class="failover-priority-list" id="failoverPriorityList">
+              <!-- Renderizado dinamicamente via renderFailoverPriorityUI() -->
+            </div>
+          </div>
 
           <!-- TIER 1: Gratuitos & Alta Potência -->
           <div style="margin-top: 14px;">
@@ -3659,25 +3881,36 @@
           </div>
         </div>
 
-        <!-- Seção 4: Otimização & Agentes -->
+        <!-- Seção 4: Otimização & Agentes (Squad Paperclip Fase 1) -->
         <div class="settings-section settings-tab-panel" id="panel-agents">
-          <div class="settings-section-title">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-              <path d="M12 17V21"></path>
-            </svg>
-            <span>Otimização & Agentes</span>
+          <div class="settings-section-title" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M12 17V21"></path>
+              </svg>
+              <span>Matriz de Agentes &amp; Otimização</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-priority-arrow" onclick="resetSquadAgentsToDefault()">↺ Restaurar Presets</button>
+              <button type="button" class="btn-priority-arrow" onclick="addCustomSquadAgentSlot()">+ Novo Agente</button>
+            </div>
           </div>
           <p style="font-size: 12px; color: #8e918f; line-height: 1.4;">
-            Controle de camadas de auditoria, integridade e segurança de código gerado.
+            Configure o squad autônomo com papéis especializados. Ao selecionar um agente no chat, sua diretriz é injetada no system prompt com máxima precedência.
           </p>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #282a2c; display: flex; flex-direction: column; gap: 8px;">
+
+          <div class="squad-agents-container" id="squadAgentsContainer">
+            <!-- Renderizado dinamicamente via renderSquadAgentsUI() -->
+          </div>
+
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid #282a2c; display: flex; flex-direction: column; gap: 8px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #e3e3e3; cursor: pointer; user-select: none;">
               <input type="checkbox" id="checkNemoGuardrails" style="cursor: pointer; accent-color: #10b981;" checked />
-              <span>🛡️ <strong>NVIDIA NeMo Guardrails & Evaluator</strong> (Auditor em Tempo Real)</span>
+              <span>🛡️ <strong>NVIDIA NeMo Guardrails &amp; Evaluator</strong> (Auditor em Tempo Real)</span>
             </label>
             <div class="param-desc" style="font-size: 10.5px; margin-top: -3px; line-height: 1.4;">
-              Atua como auditor em tempo real para verificar a integridade lógica das respostas, mitigar alucinações críticas e avaliar a segurança do código gerado via critérios NeMo. Desative caso prefira menor latência e resposta direta sem verificação em background.
+              Atua como auditor em tempo real para verificar a integridade lógica das respostas, mitigar alucinações críticas e avaliar a segurança do código gerado via critérios NeMo.
             </div>
           </div>
         </div>
@@ -4856,6 +5089,10 @@
           const targetTab = defaultTabBtn ? defaultTabBtn.getAttribute('data-tab') : 'panel-context';
           switchSettingsTab(targetTab, defaultTabBtn);
         }
+
+        // Renderiza UI do Failover Priority e da Matriz de Agentes
+        if (typeof renderFailoverPriorityUI === 'function') renderFailoverPriorityUI();
+        if (typeof renderSquadAgentsUI === 'function') renderSquadAgentsUI();
       } catch (err) {
         console.error('[SETTINGS] Aviso durante a inicialização dos campos:', err);
       } finally {
@@ -6061,7 +6298,9 @@
           response_format: globalSettings.jsonMode ? { type: "json_object" } : undefined,
           messages: payloadMessages,
           system: combinedSystemPrompt,
-          providerApiKeys: globalSettings.providerApiKeys || {}
+          providerApiKeys: globalSettings.providerApiKeys || {},
+          providerPriority: (typeof getStoredFailoverPriority === 'function') ? getStoredFailoverPriority() : ['nvidia', 'groq', 'openrouter', 'google'],
+          activeRoleDirective: (typeof getActiveRoleDirective === 'function') ? getActiveRoleDirective() : ''
         };
 
         const headers = {
@@ -6553,6 +6792,12 @@
               </svg>
               <span>Copiar</span>
             </button>
+            <button class="btn-action-msg btn-handoff-msg" title="Passar contexto para o próximo agente do squad" onclick="handoffMessageContext(this)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span>Passar contexto ➔</span>
+            </button>
             ${feedbackHtml}
           `;
           row.appendChild(meta);
@@ -6935,6 +7180,12 @@
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
           <span>Copiar</span>
+        </button>
+        <button class="btn-action-msg btn-handoff-msg" title="Passar contexto para o próximo agente do squad" onclick="handoffMessageContext(this)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>Passar contexto ➔</span>
         </button>
         ${feedbackHtml}
       `;
@@ -7581,6 +7832,8 @@
       }
       syncEffortSelector(currentEffort);
 
+      if (typeof selectSquadAgent === 'function') selectSquadAgent(window.currentSquadAgentId || 'agent_lead');
+
       if (!getStoredApiKey()) {
         setTimeout(openSettingsModal, 400);
       }
@@ -7592,6 +7845,313 @@
 
       // Verificação não-intrusiva de atualizações no GitHub Releases
       checkForUpdates();
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FRENTE A: Gestão da Fila de Prioridade do Failover
+    // ══════════════════════════════════════════════════════════════════════════
+    const DEFAULT_FAILOVER_PRIORITY = ['nvidia', 'groq', 'openrouter', 'google'];
+    const FAILOVER_PROVIDERS_META = {
+      nvidia: { name: 'NVIDIA NIM', icon: '🧠', inputId: 'providerKeyNVIDIA' },
+      groq: { name: 'Groq Cloud', icon: '⚡', inputId: 'providerKeyGroq' },
+      openrouter: { name: 'OpenRouter Free', icon: '🔄', inputId: 'providerKeyOpenrouter' },
+      google: { name: 'Google AI Studio', icon: '🔮', inputId: 'providerKeyGoogle' }
+    };
+
+    function getStoredFailoverPriority() {
+      try {
+        const raw = localStorage.getItem('cloudtron_failover_priority');
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+      return [...DEFAULT_FAILOVER_PRIORITY];
+    }
+
+    function setStoredFailoverPriority(list) {
+      try {
+        localStorage.setItem('cloudtron_failover_priority', JSON.stringify(list));
+      } catch (_) {}
+    }
+
+    function resetFailoverPriorityToDefault() {
+      setStoredFailoverPriority([...DEFAULT_FAILOVER_PRIORITY]);
+      renderFailoverPriorityUI();
+    }
+
+    function moveProviderPriority(index, delta) {
+      const list = getStoredFailoverPriority();
+      const target = index + delta;
+      if (target < 0 || target >= list.length) return;
+      const [item] = list.splice(index, 1);
+      list.splice(target, 0, item);
+      setStoredFailoverPriority(list);
+      renderFailoverPriorityUI();
+    }
+
+    function renderFailoverPriorityUI() {
+      const container = document.getElementById('failoverPriorityList');
+      if (!container) return;
+      const list = getStoredFailoverPriority();
+      container.innerHTML = '';
+
+      list.forEach((pid, idx) => {
+        const meta = FAILOVER_PROVIDERS_META[pid] || { name: pid, icon: '🌐', inputId: '' };
+        const keyInput = meta.inputId ? document.getElementById(meta.inputId) : null;
+        const hasKey = keyInput && keyInput.value && keyInput.value.trim().length > 0;
+
+        const row = document.createElement('div');
+        row.className = 'failover-item-card';
+        row.innerHTML = `
+          <div class="failover-item-info">
+            <span style="font-size: 11px; color: #64748b; font-weight: 700;">#${idx + 1}</span>
+            <span>${meta.icon}</span>
+            <strong style="color: #f1f3f4;">${meta.name}</strong>
+            <span class="provider-status-badge ${hasKey ? 'active' : 'disabled'}">
+              ${hasKey ? 'Ativo' : 'Sem Chave - Ignorado no Circuito'}
+            </span>
+          </div>
+          <div class="failover-item-actions">
+            <button type="button" class="btn-priority-arrow" onclick="moveProviderPriority(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲ Subir</button>
+            <button type="button" class="btn-priority-arrow" onclick="moveProviderPriority(${idx}, 1)" ${idx === list.length - 1 ? 'disabled' : ''}>▼ Descer</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // FRENTE B: Matriz Customizável de Agentes (Paperclip Fase 1)
+    // ══════════════════════════════════════════════════════════════════════════
+    const DEFAULT_SQUAD_AGENTS = [
+      {
+        id: 'agent_lead',
+        name: 'Arquiteto L1-L2',
+        avatar: '🏛️',
+        presetKey: 'architect',
+        roleDirective: 'Você é o Arquiteto e Estrategista de Software L1-L2. Seu foco é raciocínio estrutural, diagramas conceituais, geração de especificações em TASKS.md e definição de contratos de interface. NUNCA gere arquivos de código completos; delegue a implementação ao Coder L3.',
+        effortLevel: 'profundo'
+      },
+      {
+        id: 'agent_coder',
+        name: 'Coder L3',
+        avatar: '💻',
+        presetKey: 'coder',
+        roleDirective: 'Você é o Engenheiro Executor de Código L3. Seu foco é implementação física, refatoração e geração de código 100% completo, funcional e com sintaxe rigorosamente fechada. NUNCA utilize introduções prolixas, resumos ou código truncado.',
+        effortLevel: 'codigo'
+      },
+      {
+        id: 'agent_qa',
+        name: 'Auditor QA L4',
+        avatar: '🛡️',
+        presetKey: 'qa',
+        roleDirective: 'Você é o Auditor e Engenheiro de QA L4. Seu foco é detecção de regressões, quebra de contratos de API/rede, vulnerabilidades de segurança, edge cases e testes de cobertura Playwright/Node.js.',
+        effortLevel: 'profundo'
+      },
+      {
+        id: 'agent_sound',
+        name: 'Eng. de Som / DSP',
+        avatar: '🎛️',
+        presetKey: 'sound_engineer',
+        roleDirective: 'Você é o Engenheiro de Som e Especialista em DSP. Seu foco é áudio profissional, roteamento de barramentos, ganho de estrutura, equalização corretiva/dinâmica, acústica e mixagem/masterização digital.',
+        effortLevel: 'auto'
+      },
+      {
+        id: 'agent_custom',
+        name: 'Agente Custom',
+        avatar: '🤖',
+        presetKey: 'custom',
+        roleDirective: 'Você é um agente autônomo especializado configurado pelo usuário. Cumpra rigorosamente os objetivos estabelecidos com máximo rigor e coerência.',
+        effortLevel: 'auto'
+      }
+    ];
+
+    function getStoredSquadAgents() {
+      try {
+        const raw = localStorage.getItem('cloudtron_squad_agents');
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (_) {}
+      return JSON.parse(JSON.stringify(DEFAULT_SQUAD_AGENTS));
+    }
+
+    function setStoredSquadAgents(list) {
+      try {
+        localStorage.setItem('cloudtron_squad_agents', JSON.stringify(list));
+      } catch (_) {}
+    }
+
+    window.currentSquadAgentId = window.currentSquadAgentId || 'agent_lead';
+
+    function getActiveSquadAgent() {
+      const agents = getStoredSquadAgents();
+      return agents.find(a => a.id === window.currentSquadAgentId) || agents[0];
+    }
+
+    function getActiveRoleDirective() {
+      const active = getActiveSquadAgent();
+      return active ? (active.roleDirective || '') : '';
+    }
+
+    function selectSquadAgent(agentId) {
+      window.currentSquadAgentId = agentId;
+      const agent = getActiveSquadAgent();
+      const avatarEl = document.getElementById('activeAgentAvatar');
+      const nameEl = document.getElementById('activeAgentName');
+      if (avatarEl) avatarEl.textContent = agent.avatar || '🤖';
+      if (nameEl) nameEl.textContent = agent.name || 'Agente';
+
+      // Sincroniza automaticamente o effort padrão do agente
+      if (agent.effortLevel && typeof selectEffortById === 'function') {
+        selectEffortById(agent.effortLevel);
+      }
+      closeAgentSquadDropdown();
+    }
+
+    function toggleAgentSquadDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('agentSquadMenu');
+      if (!menu) return;
+      const isOpen = menu.classList.contains('open');
+      if (isOpen) {
+        closeAgentSquadDropdown();
+      } else {
+        renderAgentSquadDropdown();
+        menu.classList.add('open');
+      }
+    }
+
+    function closeAgentSquadDropdown() {
+      const menu = document.getElementById('agentSquadMenu');
+      if (menu) menu.classList.remove('open');
+    }
+
+    function renderAgentSquadDropdown() {
+      const menu = document.getElementById('agentSquadMenu');
+      if (!menu) return;
+      const agents = getStoredSquadAgents();
+      menu.innerHTML = '';
+
+      agents.forEach(agent => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `agent-squad-option ${agent.id === window.currentSquadAgentId ? 'active' : ''}`;
+        btn.innerHTML = `
+          <span>${agent.avatar || '🤖'}</span>
+          <div style="display: flex; flex-direction: column;">
+            <strong>${escapeHtml(agent.name)}</strong>
+            <small style="color: #94a3b8; font-size: 10px;">${agent.effortLevel || 'Auto'}</small>
+          </div>
+        `;
+        btn.onclick = () => selectSquadAgent(agent.id);
+        menu.appendChild(btn);
+      });
+    }
+
+    function renderSquadAgentsUI() {
+      const container = document.getElementById('squadAgentsContainer');
+      if (!container) return;
+      const agents = getStoredSquadAgents();
+      container.innerHTML = '';
+
+      agents.forEach((agent, idx) => {
+        const card = document.createElement('div');
+        card.className = 'squad-agent-card';
+        card.innerHTML = `
+          <div class="squad-card-header">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input type="text" class="squad-input-inline" style="width: 38px; text-align: center;" value="${escapeHtml(agent.avatar)}" onchange="updateSquadAgentField(${idx}, 'avatar', this.value)" title="Avatar / Emoji">
+              <input type="text" class="squad-input-inline" style="width: 140px; font-weight: 600;" value="${escapeHtml(agent.name)}" onchange="updateSquadAgentField(${idx}, 'name', this.value)" title="Nome do Agente">
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <select class="squad-input-inline" onchange="updateSquadAgentField(${idx}, 'effortLevel', this.value)" title="Nível de Esforço Padrão">
+                <option value="auto" ${agent.effortLevel === 'auto' ? 'selected' : ''}>Auto</option>
+                <option value="rapido" ${agent.effortLevel === 'rapido' ? 'selected' : ''}>Rápido</option>
+                <option value="codigo" ${agent.effortLevel === 'codigo' ? 'selected' : ''}>Código</option>
+                <option value="profundo" ${agent.effortLevel === 'profundo' ? 'selected' : ''}>Profundo</option>
+                <option value="criativo" ${agent.effortLevel === 'criativo' ? 'selected' : ''}>Criativo</option>
+              </select>
+              ${agents.length > 1 ? `<button type="button" class="btn-priority-arrow" onclick="removeSquadAgentSlot(${idx})" style="color: #f87171;">✕</button>` : ''}
+            </div>
+          </div>
+          <textarea class="squad-agent-directive" placeholder="Diretriz de sistema do papel..." onchange="updateSquadAgentField(${idx}, 'roleDirective', this.value)">${escapeHtml(agent.roleDirective || '')}</textarea>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateSquadAgentField(index, field, value) {
+      const agents = getStoredSquadAgents();
+      if (!agents[index]) return;
+      agents[index][field] = value;
+      setStoredSquadAgents(agents);
+      selectSquadAgent(window.currentSquadAgentId);
+    }
+
+    function addCustomSquadAgentSlot() {
+      const agents = getStoredSquadAgents();
+      const newId = 'agent_custom_' + Date.now().toString(36);
+      agents.push({
+        id: newId,
+        name: 'Novo Agente',
+        avatar: '⚡',
+        presetKey: 'custom',
+        roleDirective: 'Você é um especialista técnico autônomo. Execute as tarefas com rigor e precisão.',
+        effortLevel: 'auto'
+      });
+      setStoredSquadAgents(agents);
+      renderSquadAgentsUI();
+    }
+
+    function removeSquadAgentSlot(index) {
+      const agents = getStoredSquadAgents();
+      if (agents.length <= 1) return;
+      agents.splice(index, 1);
+      setStoredSquadAgents(agents);
+      if (!agents.some(a => a.id === window.currentSquadAgentId)) {
+        window.currentSquadAgentId = agents[0].id;
+      }
+      renderSquadAgentsUI();
+      selectSquadAgent(window.currentSquadAgentId);
+    }
+
+    function resetSquadAgentsToDefault() {
+      setStoredSquadAgents(JSON.parse(JSON.stringify(DEFAULT_SQUAD_AGENTS)));
+      window.currentSquadAgentId = 'agent_lead';
+      renderSquadAgentsUI();
+      selectSquadAgent('agent_lead');
+    }
+
+    // ── Handoff 1-Clique na Mensagem (Frente B) ──────────────────────────────
+    function handoffMessageContext(btn) {
+      const row = btn.closest('.message-row');
+      const bubble = row ? row.querySelector('.bubble') : null;
+      const rawText = bubble ? (bubble.dataset.rawText || bubble.innerText || '') : '';
+
+      const agents = getStoredSquadAgents();
+      const currentIdx = agents.findIndex(a => a.id === window.currentSquadAgentId);
+      const nextIdx = (currentIdx + 1) % agents.length;
+      const nextAgent = agents[nextIdx];
+      const fromAgent = agents[currentIdx] || agents[0];
+
+      // Alterna agente ativo e effort
+      selectSquadAgent(nextAgent.id);
+
+      // Prepara o snippet contextual (limitado para economizar tokens mantendo coerência)
+      const snippet = rawText.length > 600 ? rawText.slice(0, 600) + '...\n[Trecho da resposta do assistente resumido para transição]' : rawText;
+      const promptInput = document.getElementById('promptInput');
+      if (promptInput) {
+        promptInput.value = `[HANDOFF DE CONTEXTO • Origem: ${fromAgent.name} ➔ Destino: ${nextAgent.name}]\n${snippet}\n\nInstrução de continuidade: `;
+        if (typeof autoResizePrompt === 'function') autoResizePrompt(promptInput);
+        promptInput.focus();
+        promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
+      }
+    }
+
+    // Fechar menus ao clicar fora
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#agentSquadSelector')) {
+        closeAgentSquadDropdown();
+      }
     });
   </script>
 </body>

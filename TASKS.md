@@ -1,52 +1,100 @@
-# TASKS - CLOUDTRON ONECLICK (v1.4.0)
+# TASKS - CLOUDTRON ONECLICK (v1.5.0-dev)
 
-### TAREFA ATIVA: Backend Multi-Provider Cascading Failover & Rate-Limit Shield
+### TAREFA ATIVA: Failover Priority Reorder & Matriz Customizável de Agentes (Paperclip Fase 1)
 
 - [ ] **Alvos:** `@server.js`, `@app.html`, `@docs/app.html`, `@test/suite.js`
-- [ ] **Prioridade:** Arquitetural Crítica (Resiliência de Inferência & Continuidade de Sessão)
+- [ ] **Prioridade:** Arquitetural & Funcional (Resiliência Configurável + Orquestração Multi-Agente)
 
 ---
 
-#### 1. Diagnóstico e Necessidade Técnica
-- Atualmente, a rota `/api/messages` depende exclusivamente do provider selecionado (NVIDIA NIM por padrão).
-- Se a NVIDIA retornar HTTP 429 (Rate Limit), HTTP 503 (Overloaded) ou Connection Timeout, o streaming é abortado e a interface congela em erro.
-- O fallback deve ser transparente para o usuário: tentar a réplica no próximo provedor disponível preservando 100% das mensagens, system prompt e injeção de auditoria do NeMo RLHF.
+#### 1. FRENTE A: Reordenação Dinâmica da Fila de Failover
+
+##### A. Interface e Persistência (@app.html e @docs/app.html)
+1. **Modal de Configurações (Aba Provedores & API Keys):**
+   - Renderizar o container: *"Ordem de Prioridade do Failover"*.
+   - Listar os provedores suportados (`nvidia`, `groq`, `openrouter`, `gemini`) como cards compactos.
+   - Cada card deve conter botões de reordenação rápida (**▲ Subir** / **▼ Descer**).
+   - Exibir badge contextual: se o campo da API Key correspondente estiver vazio, exibir badge cinza `[Sem Chave - Ignorado no Circuito]`.
+2. **Armazenamento e Payload:**
+   - Persistir a ordem no `localStorage` sob a chave `cloudtron_failover_priority` (padrão: `["nvidia", "groq", "openrouter"]`).
+   - Na função de envio (`sendPrompt` / `/api/messages`), incluir o array no body:
+     ```json
+     { "providerPriority": ["groq", "nvidia", "openrouter"] }
+     ```
+
+##### B. Backend Resiliente (@server.js)
+1. **Resolução Dinâmica da Cascata:**
+   - Extrair `providerPriority` do `req.body`. Caso ausente, aplicar o fallback padrão.
+   - Filtrar dinamicamente apenas os provedores que possuam credencial válida configurada (`hasValidKey(provider)`).
+   - Iterar sobre a lista na ordem exata solicitada pelo usuário.
+   - Em caso de HTTP 429, 5xx, timeout ou erro de rede, saltar para o próximo da fila preservando o payload e o In-Context RLHF intactos.
+   - Emitir o evento SSE `provider_meta` com o provider final assumido.
 
 ---
 
-#### 2. Especificação da Correção
+#### 2. FRENTE B: Matriz Customizável de Agentes (Paperclip Fase 1)
 
-##### A. Lógica de Cascata no Backend (@server.js)
-1. **Definição da Ordem de Prioridade:**
-   - Provider 1: `nvidia` (NVIDIA NIM)
-   - Provider 2: `groq` (Groq API — ultra-baixa latência)
-   - Provider 3: `openrouter` (OpenRouter API)
-2. **Critérios de Acionamento do Fallback:**
-   - Respostas HTTP 429, 500, 502, 503, 504.
-   - Timeout de conexão ou erro de rede (`ECONNREFUSED`, `ETIMEDOUT`).
-   - Chave do provedor principal não configurada ou inválida.
-3. **Mapeamento de Modelos Equivalentes no Fallback:**
-   - NVIDIA: `nvidia/nemotron-3.5-super-vl-120b-a12b` (ou modelo ativo).
-   - Groq: `llama-3.3-70b-versatile` ou `mixtral-8x7b-32768`.
-   - OpenRouter: `meta-llama/llama-3.3-70b-instruct` ou similar.
-4. **Preservação de Contexto e Telemetria:**
-   - O payload original (`messages`, incluindo os blocos `[AUDITORIA DO JUIZ NEMO]`) deve ser repassado sem mutações para o novo endpoint.
-   - Enviar no início do stream (ou em cabeçalho SSE) a telemetria do provedor que assumiu a resposta:
-     `data: {"type": "provider_meta", "provider": "Groq", "failover": true, "original": "NVIDIA"}\n\n`
+##### A. Estrutura de Dados e Presets
+1. Cada slot de agente é definido por:
+   ```typescript
+   interface AgentRoleConfig {
+     id: string;              // "agent_lead", "agent_coder", "agent_qa", "agent_custom_1"
+     name: string;            // Nome amigável exibido no UI
+     avatar: string;          // Emoji ou sigla
+     presetKey: string;       // "architect", "coder", "qa", "sound_engineer", "custom"
+     roleDirective: string;   // Diretriz injetada no system prompt
+     effortLevel: string;     // "Auto", "Profundo", "Código", "Rápido"
+   }
+Biblioteca de Presets Nativos:
 
-##### B. Atualização do Frontend (@app.html e @docs/app.html)
-1. Escutar o evento de telemetria `provider_meta` no leitor de stream.
-2. Atualizar o badge de status e latência no rodapé:
-   - Se for o provider primário: exibir nome normal e latência (ex: `NVIDIA NIM • 124ms`).
-   - Se foi ativado o failover: exibir badge visual de contingência (ex: `⚠️ Groq (Failover Ativo) • 89ms`).
+Planejador / Arquiteto L1-L2: Raciocínio estrutural, diagramas, geração de TASKS.md e contratos de interface.
 
-##### C. Bateria de Testes (@test/suite.js)
-1. Adicionar teste unitário de simulação de fallback:
-   - Simular mock de erro 429 da NVIDIA e verificar se a rota tenta o provider secundário.
+Executor / Coder L3: Sintaxe cirúrgica, sem introduções ou prosa, zero truncamento de código.
 
----
+Auditor / QA L4: Detecção de regressões, contratos de rede, falhas de segurança e edge cases.
 
-#### 3. Critérios de Aceitação
-- Se a chamada para a NVIDIA falhar com 429 ou timeout, a requisição é assumida pelo próximo provider configurado sem quebrar o streaming.
-- As diretrizes de sistema persistentes e a injeção do NeMo são entregues intactas ao provider de fallback.
-- O pipeline completo (`npm run pipeline`: L4 -> L3 -> L5) passa com 100% de sucesso.
+Engenheiro de Som / DSP: Roteamento de barramentos, ganho, equalização, acústica e mixagem digital.
+
+Custom: Template neutro desbloqueado para digitação livre.
+
+B. UI de Gerenciamento & Chat Input (@app.html e @docs/app.html)
+Modal / Gaveta de Configuração do Squad:
+
+Permite editar o nome, avatar, preset base e roleDirective (textarea expansível) de cada agente.
+
+Botão para resetar para os presets padrão ou adicionar novos slots customizados.
+
+Persistência no localStorage sob cloudtron_squad_agents.
+
+Seletor de Agente Ativo no Input do Chat:
+
+Adicionar chip seletor ao lado do seletor de esforço (ex.: [@Arquiteto], [@Coder], [@Auditor]).
+
+Ao trocar de agente, aplica visualmente o badge correspondente e vincula o effortLevel padrão daquele agente.
+
+Handoff 1-Clique na Mensagem:
+
+No rodapé de cada resposta gerada, renderizar a ação Passar contexto para [Próximo Agente] ➔.
+
+Ao clicar, o resumo/conteúdo da resposta é formatado e inserido no input pronto para despacho ao próximo papel.
+
+C. Backend Orchestration (@server.js)
+Receber o campo activeRoleDirective no body da requisição.
+
+Interceptar a montagem do system prompt:
+
+Inserir a diretriz do agente com precedência logo abaixo das diretrizes de arquitetura e regras de auto-calibração.
+
+3. Bateria de Testes de Contrato (@test/suite.js)
+Adicionar teste unitário validando a resolução de prioridade personalizada enviada no payload (ex: forçar ordem groq -> nvidia e simular erro na primeira).
+
+Validar contrato de injeção da activeRoleDirective no payload de mensagens.
+
+4. Critérios de Aceitação
+Reordenar a lista no modal altera a ordem real de execução no backend.
+
+Provedores sem chave são desconsiderados automaticamente da fila sem quebrar a cascata.
+
+O usuário consegue alternar entre agentes pré-definidos e customizados no input.
+
+Pipeline completo (npm run pipeline: L4 -> L3 -> L5) passa com 100% de sucesso.

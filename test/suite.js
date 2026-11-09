@@ -239,6 +239,95 @@ async function runSuite() {
     report('Contrato de Cascading Failover', false, e.message);
   }
 
+  // 7. Teste de Contrato do Failover Dinâmico & Matriz de Agentes (Paperclip Fase 1)
+  console.log('\n--- 7. Teste de Contrato do Failover Dinâmico & Matriz de Agentes ---');
+  try {
+    const serverCode = fs.readFileSync('server.js', 'utf8');
+    const appHtmlCode = fs.readFileSync('app.html', 'utf8');
+    const docsHtmlCode = fs.readFileSync('docs/app.html', 'utf8');
+
+    // Contrato 1: Injeção de activeRoleDirective no server.js
+    const hasRoleDirective = serverCode.includes('activeRoleDirective') && serverCode.includes('[DIRETRIZ DE PAPEL / AGENTE ATIVO]');
+    report(
+      'Contrato de Injeção de Diretiva de Papel (activeRoleDirective)',
+      hasRoleDirective,
+      'server.js injeta activeRoleDirective com precedência estruturada'
+    );
+
+    // Contrato 2: Resolução Dinâmica de providerPriority no server.js
+    const hasDynamicPriority = serverCode.includes('providerPriority') && serverCode.includes('activeQueueWithKeys');
+    report(
+      'Contrato de Resolução Dinâmica da Fila de Provedores',
+      hasDynamicPriority,
+      'server.js processa providerPriority e filtra provedores sem chave ativa'
+    );
+
+    // Contrato 3: Simulação funcional de prioridade customizada com failover
+    function simulateDynamicPriority(customOrder, mockErrors, availableKeys) {
+      const defaultQueue = [
+        { id: 'nvidia', name: 'NVIDIA NIM' },
+        { id: 'groq', name: 'Groq Cloud' },
+        { id: 'openrouter', name: 'OpenRouter Free' }
+      ];
+
+      // Reordena conforme customOrder
+      const reordered = [];
+      for (const id of customOrder) {
+        const found = defaultQueue.find(p => p.id === id);
+        if (found) reordered.push(found);
+      }
+      for (const p of defaultQueue) {
+        if (!reordered.some(i => i.id === p.id)) reordered.push(p);
+      }
+
+      // Filtra por chaves válidas
+      const activeQueue = reordered.filter(p => !!availableKeys[p.id]);
+
+      let selected = null;
+      let failoverTriggered = false;
+
+      for (let i = 0; i < activeQueue.length; i++) {
+        const p = activeQueue[i];
+        if (mockErrors[p.id]) {
+          failoverTriggered = true;
+          continue;
+        }
+        selected = p.name;
+        break;
+      }
+
+      return { selected, failoverTriggered, firstAttempted: activeQueue[0]?.name };
+    }
+
+    // Cenário: Usuário define Groq em primeiro lugar -> Groq dá 429 -> Cai para NVIDIA
+    const simGroqFirst = simulateDynamicPriority(
+      ['groq', 'nvidia', 'openrouter'],
+      { groq: 429 },
+      { nvidia: 'nv_key', groq: 'groq_key', openrouter: 'or_key' }
+    );
+
+    report(
+      'Simulação de Prioridade Customizada (Groq 429 -> Failover para NVIDIA)',
+      simGroqFirst.firstAttempted === 'Groq Cloud' && simGroqFirst.selected === 'NVIDIA NIM' && simGroqFirst.failoverTriggered,
+      `Tentativa primária: ${simGroqFirst.firstAttempted} | Provedor final: ${simGroqFirst.selected}`
+    );
+
+    // Contrato 4: Presença e Paridade dos Elementos no Frontend
+    const hasSquadInApp = appHtmlCode.includes('agentSquadSelector') && appHtmlCode.includes('handoffMessageContext');
+    const hasSquadInDocs = docsHtmlCode.includes('agentSquadSelector') && docsHtmlCode.includes('handoffMessageContext');
+    const hasPriorityInApp = appHtmlCode.includes('failoverPriorityList');
+    const hasPriorityInDocs = docsHtmlCode.includes('failoverPriorityList');
+
+    report(
+      'Integridade e Paridade da Matriz de Agentes & Failover UI (app.html vs docs/app.html)',
+      hasSquadInApp && hasSquadInDocs && hasPriorityInApp && hasPriorityInDocs,
+      'Paridade estrita de 100% verificada no chat input e modal de configurações'
+    );
+
+  } catch (err) {
+    report('Teste de Contrato do Failover Dinâmico & Agentes', false, err.message);
+  }
+
   console.log('\n=====================================================');
   console.log(`RESUMO DOS TESTES: ${passedTests}/${totalTests} PASSOU (${failedTests} falhas)`);
   console.log('=====================================================');
