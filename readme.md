@@ -4,10 +4,10 @@
 ### Desktop Nativo & Web UI para NVIDIA Nemotron 3.5 Super VL 120B
 
 [![Website](https://img.shields.io/badge/%F0%9F%8C%90_Website_Oficial-felipeptxa.github.io%2Fcloudtron-00F0FF?style=for-the-badge&logo=googlechrome&logoColor=black)](https://felipeptxa.github.io/cloudtron/)
-[![Download Windows](https://img.shields.io/badge/%F0%9F%93%A5_Baixar_Windows_x64-v1.3.0-00FFA3?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/felipeptxa/cloudtron/releases/download/v1.3.0/Cloudtron-OneClick-Setup-1.3.0.exe)
+[![Download Windows](https://img.shields.io/badge/%F0%9F%93%A5_Baixar_Windows_x64-v1.4.0-00FFA3?style=for-the-badge&logo=windows&logoColor=black)](https://github.com/felipeptxa/cloudtron/releases/download/v1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe)
 [![Licença MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-7928CA?style=for-the-badge)](LICENSE)
 
-**[👉 Acessar Landing Page Oficial](https://felipeptxa.github.io/cloudtron/)** • **[⚡ Web Preview Online](https://felipeptxa.github.io/cloudtron/app.html)** • **[📦 Baixar Instalador NSIS v1.3.0](https://github.com/felipeptxa/cloudtron/releases/download/v1.3.0/Cloudtron-OneClick-Setup-1.3.0.exe)** • **[📖 Documentação](#-recursos-principais-v13)**
+**[👉 Acessar Landing Page Oficial](https://felipeptxa.github.io/cloudtron/)** • **[⚡ Web Preview Online](https://felipeptxa.github.io/cloudtron/app.html)** • **[📦 Baixar Instalador NSIS v1.4.0](https://github.com/felipeptxa/cloudtron/releases/download/v1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe)** • **[📖 Documentação](#-recursos-principais-v13)**
 
 ---
 
@@ -15,7 +15,7 @@
 
 Aplicativo Desktop nativo para Windows (Electron) e Web UI local projetado para interagir com o modelo multimodal de raciocínio profundo **NVIDIA Nemotron 3.5 Super VL 120B** sem configurações complexas de ambiente.
 
-Distribuição pronta via instalador executável: `Cloudtron-OneClick-Setup-1.3.0.exe` (NSIS x64).
+Distribuição pronta via instalador executável: `Cloudtron-OneClick-Setup-1.4.0.exe` (NSIS x64).
 
 ---
 
@@ -125,7 +125,7 @@ Distribuição pronta via instalador executável: `Cloudtron-OneClick-Setup-1.3.
 ### 📦 Como Instalar e Rodar
 
 #### Opção 1: Instalador Desktop Windows (Recomendado para usuários finais)
-1. Baixe o instalador `Cloudtron-OneClick-Setup-1.3.0.exe` na [Release v1.3.0](https://github.com/felipeptxa/cloudtron/releases/tag/v1.3.0).
+1. Baixe o instalador `Cloudtron-OneClick-Setup-1.4.0.exe` na [Release v1.4.0](https://github.com/felipeptxa/cloudtron/releases/tag/v1.4.0).
 2. Execute o instalador e siga o assistente (criará atalho na Área de Trabalho e no Menu Iniciar).
 3. Abra o aplicativo, clique em **Configurações** no topo, insira sua chave da NVIDIA (`nvapi-...`) ou de outro provedor (Groq, OpenRouter, DeepSeek, etc.) e comece a conversar!
 
