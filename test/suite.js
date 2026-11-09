@@ -99,13 +99,13 @@ async function runSuite() {
     report('Auditoria de profundidade CSS', false, e.message);
   }
 
-  // 4. Test External URLs (Status 200/302)
+  // 4. Test External URLs (Status 200/302 - Rota Canônica 1.4.0)
   console.log('\n--- 4. Integridade de URLs da Landing Page ---');
   const criticalUrls = [
     'https://github.com/felipeptxa/cloudtron',
     'https://github.com/felipeptxa/cloudtron/releases',
-    'https://github.com/felipeptxa/cloudtron/releases/tag/v1.4.0',
-    'https://github.com/felipeptxa/cloudtron/releases/download/v1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe',
+    'https://github.com/felipeptxa/cloudtron/releases/tag/1.4.0',
+    'https://github.com/felipeptxa/cloudtron/releases/download/1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe',
     'https://github.com/felipeptxa/cloudtron/issues'
   ];
 

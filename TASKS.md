@@ -1,100 +1,56 @@
-# TASKS - CLOUDTRON ONECLICK (v1.5.0-dev)
+# TASKS - CLOUDTRON ONECLICK (v1.4.1-align)
 
-### TAREFA ATIVA: Failover Priority Reorder & Matriz Customizável de Agentes (Paperclip Fase 1)
+### TAREFA ATIVA: Alinhamento Visual do App, Resolução de Download e Modernização da Landing Page
 
-- [ ] **Alvos:** `@server.js`, `@app.html`, `@docs/app.html`, `@test/suite.js`
-- [ ] **Prioridade:** Arquitetural & Funcional (Resiliência Configurável + Orquestração Multi-Agente)
-
----
-
-#### 1. FRENTE A: Reordenação Dinâmica da Fila de Failover
-
-##### A. Interface e Persistência (@app.html e @docs/app.html)
-1. **Modal de Configurações (Aba Provedores & API Keys):**
-   - Renderizar o container: *"Ordem de Prioridade do Failover"*.
-   - Listar os provedores suportados (`nvidia`, `groq`, `openrouter`, `gemini`) como cards compactos.
-   - Cada card deve conter botões de reordenação rápida (**▲ Subir** / **▼ Descer**).
-   - Exibir badge contextual: se o campo da API Key correspondente estiver vazio, exibir badge cinza `[Sem Chave - Ignorado no Circuito]`.
-2. **Armazenamento e Payload:**
-   - Persistir a ordem no `localStorage` sob a chave `cloudtron_failover_priority` (padrão: `["nvidia", "groq", "openrouter"]`).
-   - Na função de envio (`sendPrompt` / `/api/messages`), incluir o array no body:
-     ```json
-     { "providerPriority": ["groq", "nvidia", "openrouter"] }
-     ```
-
-##### B. Backend Resiliente (@server.js)
-1. **Resolução Dinâmica da Cascata:**
-   - Extrair `providerPriority` do `req.body`. Caso ausente, aplicar o fallback padrão.
-   - Filtrar dinamicamente apenas os provedores que possuam credencial válida configurada (`hasValidKey(provider)`).
-   - Iterar sobre a lista na ordem exata solicitada pelo usuário.
-   - Em caso de HTTP 429, 5xx, timeout ou erro de rede, saltar para o próximo da fila preservando o payload e o In-Context RLHF intactos.
-   - Emitir o evento SSE `provider_meta` com o provider final assumido.
+- [ ] **Alvos:** `@index.html`, `@docs/index.html`, `@app.html`, `@docs/app.html`, `@test/suite.js`
+- [ ] **Prioridade:** UX/UI, Confiabilidade de Release e Consistência de Branding
 
 ---
 
-#### 2. FRENTE B: Matriz Customizável de Agentes (Paperclip Fase 1)
+#### 1. Landing Page: Botões e Correção de Rota (@index.html e @docs/index.html)
+- [ ] **Remover Botão Redundante:** Eliminar o botão "Versão mais recente no GitHub". Manter estritamente:
+  1. `Baixar para Windows (x64)` com subtexto `Cloudtron-OneClick-Setup-1.4.0.exe (NSIS)`.
+     - Link de download apontando para a release ativa verificada:
+       `https://github.com/felipeptxa/cloudtron/releases/download/1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe`
+  2. `Ver no GitHub (MIT)` apontando para `https://github.com/felipeptxa/cloudtron`.
+- [ ] **Reescrita dos 6 Cards de Recursos (Linguagem Popular + Rigor Técnico):**
+  - Card 1: Instalação Instantânea (Zero Setup) — Baixe e use sem Python/CUDA vs Electron + Node.js SSE.
+  - Card 2: Raciocínio Transparente (Deep Thinking) — Caixa retrátil para ver a lógica vs tag <thinking> CoT nativa.
+  - Card 3: Entendimento de Imagens e Arquivos (Multimodal) — Ctrl+V para prints e tabelas vs parsers PDF/DOCX/XLSX.
+  - Card 4: Visualizador em Tempo Real (Live Sandbox Preview) — Iframe isolado para rodar HTML/JS ao vivo.
+  - Card 5: Conexão Resiliente e Sem Quedas (Cascading Failover) — IA sem interrupção vs cascata configurável NVIDIA -> Groq -> OpenRouter.
+  - Card 6: Ajuste de Raciocínio por Tarefa (Effort Adaptativo) — Respostas rápidas vs foco profundo e analítico.
+- [ ] **Sincronização da Seção Linha do Tempo:**
+  - Card 1: v1.0 - v1.2 (Lançado) — Base Desktop & Proxy SSE
+  - Card 2: v1.3.0 (Lançado) — Effort Dock, Split View & Sandbox
+  - Card 3: v1.4.0 (Versão Atual) — Cascading Failover & Pipeline Resiliente L4/L3/L5
+  - Card 4: v1.5.0 (Planejado) — Matriz de Agentes Customizável (Paperclip Core) & Priority Failover
 
-##### A. Estrutura de Dados e Presets
-1. Cada slot de agente é definido por:
-   ```typescript
-   interface AgentRoleConfig {
-     id: string;              // "agent_lead", "agent_coder", "agent_qa", "agent_custom_1"
-     name: string;            // Nome amigável exibido no UI
-     avatar: string;          // Emoji ou sigla
-     presetKey: string;       // "architect", "coder", "qa", "sound_engineer", "custom"
-     roleDirective: string;   // Diretriz injetada no system prompt
-     effortLevel: string;     // "Auto", "Profundo", "Código", "Rápido"
-   }
-Biblioteca de Presets Nativos:
+---
 
-Planejador / Arquiteto L1-L2: Raciocínio estrutural, diagramas, geração de TASKS.md e contratos de interface.
+#### 2. Refinamento Visual da Aplicação Real (@app.html e @docs/app.html)
+- [ ] **Preservação Contratual Rígida:**
+  - NÃO alterar IDs funcionais, seletores de squad, streaming SSE, parsers ou modal de configurações recém-implementados.
+  - MANTER a logo oficial intacta (hexágono de nós de rede do Cloudtron).
+- [ ] **Elevação Cosmética (Paridade com Mockup da Landing):**
+  - Paleta de sintaxe nos codeblocks inspirada no Deep Midnight / Neon:
+    - Cyan Neon (`#38bdf8`) para tags e seletores.
+    - Mint Green (`#4ade80`) para componentes, funções e badges de sucesso.
+    - Lilac / Rose (`#c084fc` / `#f472b6`) para strings e propriedades.
+    - Fundo do editor em contraste refinado (`bg-[#0c1017]` ou similar com borda `border-white/5`).
+  - Polimento de raios de curvatura (`rounded-xl`) e bordas translúcidas nos containers laterais e chat.
+  - Garantir 100% de paridade entre `app.html` e `docs/app.html`.
 
-Executor / Coder L3: Sintaxe cirúrgica, sem introduções ou prosa, zero truncamento de código.
+---
 
-Auditor / QA L4: Detecção de regressões, contratos de rede, falhas de segurança e edge cases.
+#### 3. Bateria de Validação Automatizada (@test/suite.js)
+- [ ] Atualizar Seção 4 para validar as URLs corrigidas da Hero da landing page.
+- [ ] Garantir profundidade CSS depth=0 e integridade dos testes de contrato da Seção 7.
 
-Engenheiro de Som / DSP: Roteamento de barramentos, ganho, equalização, acústica e mixagem digital.
+---
 
-Custom: Template neutro desbloqueado para digitação livre.
-
-B. UI de Gerenciamento & Chat Input (@app.html e @docs/app.html)
-Modal / Gaveta de Configuração do Squad:
-
-Permite editar o nome, avatar, preset base e roleDirective (textarea expansível) de cada agente.
-
-Botão para resetar para os presets padrão ou adicionar novos slots customizados.
-
-Persistência no localStorage sob cloudtron_squad_agents.
-
-Seletor de Agente Ativo no Input do Chat:
-
-Adicionar chip seletor ao lado do seletor de esforço (ex.: [@Arquiteto], [@Coder], [@Auditor]).
-
-Ao trocar de agente, aplica visualmente o badge correspondente e vincula o effortLevel padrão daquele agente.
-
-Handoff 1-Clique na Mensagem:
-
-No rodapé de cada resposta gerada, renderizar a ação Passar contexto para [Próximo Agente] ➔.
-
-Ao clicar, o resumo/conteúdo da resposta é formatado e inserido no input pronto para despacho ao próximo papel.
-
-C. Backend Orchestration (@server.js)
-Receber o campo activeRoleDirective no body da requisição.
-
-Interceptar a montagem do system prompt:
-
-Inserir a diretriz do agente com precedência logo abaixo das diretrizes de arquitetura e regras de auto-calibração.
-
-3. Bateria de Testes de Contrato (@test/suite.js)
-Adicionar teste unitário validando a resolução de prioridade personalizada enviada no payload (ex: forçar ordem groq -> nvidia e simular erro na primeira).
-
-Validar contrato de injeção da activeRoleDirective no payload de mensagens.
-
-4. Critérios de Aceitação
-Reordenar a lista no modal altera a ordem real de execução no backend.
-
-Provedores sem chave são desconsiderados automaticamente da fila sem quebrar a cascata.
-
-O usuário consegue alternar entre agentes pré-definidos e customizados no input.
-
-Pipeline completo (npm run pipeline: L4 -> L3 -> L5) passa com 100% de sucesso.
+#### 4. Critérios de Aceitação
+- Botão de download na landing page baixa o binário oficial sem erro 404.
+- Landing page limpa com apenas 2 botões na Hero.
+- Janela real do app alinhada à estética da landing page preservando a logo oficial e o novo motor multi-agente intacto.
+- Pipeline `npm run pipeline` 100% verde (L4 -> L3 -> L5).

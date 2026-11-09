@@ -295,10 +295,10 @@
         Estação desktop ultra leve em Electron e Node.js para inferência direta do Nemotron 120B. Zero compilação local de IA, zero configuração pesada de Python ou drivers CUDA.
       </p>
 
-      <!-- Botões de Ação Principais -->
+      <!-- Botões de Ação Principais (Hero Limpa e Focada) -->
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5">
-        <!-- CTA Primário (Windows Download) -->
-        <a href="https://github.com/felipeptxa/cloudtron/releases/download/v1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe" target="_blank" rel="noopener noreferrer" class="btn-download-pulse w-full sm:w-auto inline-flex items-center justify-center gap-3.5 px-8 py-4 rounded-xl text-black font-sans font-bold text-base transition-all group" id="heroDownloadBtn">
+        <!-- CTA Primário (Windows Download Direto - Release Canônica) -->
+        <a href="https://github.com/felipeptxa/cloudtron/releases/download/1.4.0/Cloudtron-OneClick-Setup-1.4.0.exe" target="_blank" rel="noopener noreferrer" class="btn-download-pulse w-full sm:w-auto inline-flex items-center justify-center gap-3.5 px-8 py-4 rounded-xl text-black font-sans font-bold text-base transition-all group" id="heroDownloadBtn">
           <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
             <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.751"/>
           </svg>
@@ -307,12 +307,8 @@
             <div class="text-[11px] font-mono opacity-80 font-normal">Cloudtron-OneClick-Setup-1.4.0.exe (NSIS)</div>
           </div>
         </a>
-        <a href="https://github.com/felipeptxa/cloudtron/releases/latest" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-white/5 border border-cyberBorder text-mutedText font-medium text-base hover:border-neonCyan/50 hover:bg-white/10 transition-all">
-          <svg class="w-5 h-5 text-neonCyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 6 1 12 7 6 7 12"/></svg>
-          <span>Versão mais recente no GitHub</span>
-        </a>
 
-        <!-- CTA Secundário (GitHub) -->
+        <!-- CTA Secundário (GitHub Código Aberto) -->
         <a href="https://github.com/felipeptxa/cloudtron" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-xl bg-cyberCard border border-cyberBorder text-white font-medium text-base hover:border-neonCyan/50 hover:bg-cyberCard/90 hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all">
           <svg class="w-5 h-5 text-neonCyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -702,7 +698,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        <!-- Card 1: Zero Setup Local -->
+        <!-- Card 1: Instalação Instantânea (Zero Setup) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonCyan/10 border border-neonCyan/30 flex items-center justify-center text-neonCyan mb-6">
@@ -711,18 +707,18 @@
                 <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Zero Setup Local</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Instalação Instantânea (Zero Setup)</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Servidor HTTP nativo Node.js com streaming SSE bidirecional e empacotamento Electron leve. Esqueça dependências quebradas de Python e drivers CUDA incompatíveis.
+              Baixe e use em segundos sem compilar Python, configurar PyTorch ou gerenciar drivers CUDA. Runtime desktop nativo em Electron com servidor local Node.js e streaming SSE de ultra baixa latência.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonCyan flex items-center justify-between">
             <span>Stack:</span>
-            <span>Electron 34 • Node.js • Win x64</span>
+            <span>Electron 34 • Node.js SSE • Win x64</span>
           </div>
         </div>
 
-        <!-- Card 2: Deep Thinking (CoT) Inspecionável -->
+        <!-- Card 2: Raciocínio Transparente (Deep Thinking) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonPurple/15 border border-neonPurple/40 flex items-center justify-center text-neonPurple mb-6">
@@ -732,18 +728,18 @@
                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Deep Thinking (CoT) Inspecionável</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Raciocínio Transparente (Deep Thinking)</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Caixa retrátil dedicada para auditar o raciocínio analítico do Nemotron antes da resposta final. Transparência lógica completa para refatorações críticas.
+              Acompanhe o fluxo lógico passo a passo em uma gaveta retrátil dedicada. Suporte nativo à tag <code>&lt;thinking&gt;</code> do Nemotron e DeepSeek R1, garantindo auditoria completa antes do código final.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonPurple flex items-center justify-between">
             <span>Inspecionabilidade:</span>
-            <span>Tag &lt;thinking&gt; nativa</span>
+            <span>Chain-of-Thought (CoT) Nativo</span>
           </div>
         </div>
 
-        <!-- Card 3: Multimodalidade com Visão -->
+        <!-- Card 3: Entendimento de Imagens &amp; Arquivos (Multimodal) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonGreen/10 border border-neonGreen/30 flex items-center justify-center text-neonGreen mb-6">
@@ -752,18 +748,18 @@
                 <circle cx="12" cy="12" r="3"></circle>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Multimodalidade com Visão</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Entendimento de Imagens &amp; Arquivos</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Suporte nativo a Ctrl+V para colar capturas de tela, mockups do Figma ou logs de terminal, além de drag-and-drop de arquivos para contextualização imediata.
+              Cole prints de bugs ou telas com um simples Ctrl+V. Arraste planilhas, PDFs, DOCX ou repositórios compactados em ZIP com ingestão direta e extração automática de contexto.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonGreen flex items-center justify-between">
-            <span>Entrada:</span>
-            <span>PNG, JPEG, WEBP &amp; Snippets</span>
+            <span>Entrada Universal:</span>
+            <span>Imagens • PDFs • DOCX • XLSX • ZIP</span>
           </div>
         </div>
 
-        <!-- Card 4: Live Sandbox Preview -->
+        <!-- Card 4: Visualizador em Tempo Real (Live Sandbox Preview) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonCyan/10 border border-neonCyan/30 flex items-center justify-center text-neonCyan mb-6">
@@ -773,18 +769,18 @@
                 <line x1="12" y1="17" x2="12" y2="21"></line>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Live Sandbox Preview</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Visualizador em Tempo Real (Live Sandbox)</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Iframe isolado para executar e visualizar artefatos HTML5, CSS e JS criados pelo modelo em tempo real, sem poluir o contexto da conversa nem vazar escopo.
+              Execute e interaja com interfaces HTML, CSS e JavaScript criadas pela IA em um iframe seguro com hot-reload imediato, sem contaminar seu sistema operacional.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonCyan flex items-center justify-between">
             <span>Ambiente:</span>
-            <span>Iframe seguro com hot-reload</span>
+            <span>Iframe Isolado com Split-View</span>
           </div>
         </div>
 
-        <!-- Card 5: Diagnóstico em 2 Passos -->
+        <!-- Card 5: Conexão Resiliente e Sem Quedas (Cascading Failover) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonPurple/15 border border-neonPurple/40 flex items-center justify-center text-neonPurple mb-6">
@@ -792,18 +788,18 @@
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Diagnóstico em 2 Passos</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Conexão Resiliente (Cascading Failover)</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Botão no cabeçalho do app que testa a conexão local com o backend e valida a chave nvapi-... diretamente no endpoint oficial da NVIDIA NIM.
+              Escudo contra erros 429 de Rate Limit. Se o provedor primário atingir limites, a cascata salta automaticamente para Groq ou OpenRouter sem travar o chat e preservando todo o histórico.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonPurple flex items-center justify-between">
-            <span>Telemetria:</span>
-            <span>NVIDIA NIM Latency Test</span>
+            <span>Circuito:</span>
+            <span>NVIDIA NIM ➔ Groq ➔ OpenRouter</span>
           </div>
         </div>
 
-        <!-- Card 6: Motor Heurístico Adaptativo -->
+        <!-- Card 6: Ajuste de Raciocínio (Effort Adaptativo) -->
         <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-neonGreen/10 border border-neonGreen/30 flex items-center justify-center text-neonGreen mb-6">
@@ -811,48 +807,14 @@
                 <path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path>
               </svg>
             </div>
-            <h3 class="font-display font-bold text-xl text-white mb-3">Motor Heurístico Adaptativo</h3>
+            <h3 class="font-display font-bold text-xl text-white mb-3">Ajuste de Raciocínio (Effort Adaptativo)</h3>
             <p class="text-mutedText text-sm leading-relaxed mb-6">
-              Modulação automática de hiperparâmetros (Código, Profundo, Criativo e Rápido) com base no prompt para equilibrar criatividade e rigidez determinística.
+              Alterne entre respostas diretas de baixa latência (Rápido) e investigações arquiteturais exaustivas (Profundo). Parâmetros modulados com precisão a cada prompt.
             </p>
           </div>
           <div class="pt-4 border-t border-cyberBorder text-xs font-mono text-neonGreen flex items-center justify-between">
-            <span>Modos:</span>
-            <span>Código • CoT • Rápido • Livre</span>
-          </div>
-        </div>
-
-        <!-- Card 7: Closed-Loop In-Context RLHF & NeMo Judge -->
-        <div class="glass-card p-6 md:p-8 rounded-2xl flex flex-col justify-between md:col-span-2 lg:col-span-3 border-neonCyan/30 bg-gradient-to-r from-cyberCard/90 via-[#0e1628]/80 to-cyberCard/90 relative overflow-hidden">
-          <div class="absolute -right-12 -top-12 w-48 h-48 bg-neonCyan/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-12 h-12 rounded-xl bg-neonCyan/15 border border-neonCyan/40 flex items-center justify-center text-neonCyan">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-              </div>
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider bg-neonCyan/10 text-neonCyan border border-neonCyan/30">
-                Inovação Exclusiva v1.4.0
-              </span>
-            </div>
-            
-            <h3 class="font-display font-extrabold text-2xl text-white mb-3">
-              Closed-Loop Intelligence: Auto-Correção Ativa via NVIDIA NeMo Judge
-            </h3>
-            
-            <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 max-w-4xl">
-              Esqueça LLMs que repetem os mesmos erros. O <strong>Cloudtron OneClick v1.4.0</strong> implementa <strong>In-Context RLHF em tempo de execução</strong>: cada resposta é auditada sintaticamente por um LLM-as-a-Judge independente. Caso ocorram advertências ou inconformidades, a crítica técnica é injetada automaticamente no turno seguinte, forçando o modelo a recalibrar precisão, arquitetura e fechamento de sintaxe sem requerer prompts corretivos do usuário.
-            </p>
-          </div>
-          
-          <div class="pt-4 border-t border-cyberBorder flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-            <div class="flex items-center gap-4 text-slate-400">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neonGreen"></span> Auditoria LLM-as-a-Judge</span>
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neonCyan"></span> In-Context Calibration</span>
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neonPurple"></span> Zero Alucinação Repetida</span>
-            </div>
-            <span class="text-neonCyan font-semibold">Engine: NeMo Guardrails Core</span>
+            <span>Controle:</span>
+            <span>Auto • Rápido • Código • Profundo</span>
           </div>
         </div>
 
@@ -926,51 +888,51 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
-        <!-- v1.0.0 -->
+        <!-- Marco 1: v1.0 - v1.2 (Lançado) -->
         <div class="glass-card p-6 rounded-2xl border-cyberBorder">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-mono font-bold text-neonGreen px-2.5 py-1 rounded bg-neonGreen/10 border border-neonGreen/30">Lançado</span>
-            <span class="font-mono text-xs text-mutedText">v1.0.0</span>
+            <span class="font-mono text-xs text-mutedText">v1.0 - v1.2</span>
           </div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Base Web &amp; Proxy SSE</h3>
+          <h3 class="font-display font-bold text-lg text-white mb-2">Base Desktop &amp; Proxy SSE</h3>
           <p class="text-mutedText text-xs leading-relaxed">
-            Implementação da arquitetura base de proxy HTTP nativo, conexão com o gateway da NVIDIA NIM e renderização de tokens via stream.
+            Arquitetura de proxy HTTP nativo, gateway de streaming SSE sem perda de buffers, suporte multimodal com Ctrl+V e empacotamento NSIS.
           </p>
         </div>
 
-        <!-- v1.1.0 -->
+        <!-- Marco 2: v1.3.0 (Lançado) -->
         <div class="glass-card p-6 rounded-2xl border-cyberBorder">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-mono font-bold text-neonGreen px-2.5 py-1 rounded bg-neonGreen/10 border border-neonGreen/30">Lançado</span>
-            <span class="font-mono text-xs text-mutedText">v1.1.0</span>
+            <span class="font-mono text-xs text-mutedText">v1.3.0</span>
           </div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Desktop &amp; Visão</h3>
+          <h3 class="font-display font-bold text-lg text-white mb-2">Effort Dock, Split View &amp; Sandbox</h3>
           <p class="text-mutedText text-xs leading-relaxed">
-            Instalador Windows x64 NSIS, ferramenta de diagnóstico em 2 passos, container retrátil de Chain-of-Thought e captura de imagens via Ctrl+V.
+            Controle de profundidade de raciocínio integrado ao prompt, visualizador em Live Sandbox com iframe e Context Bridge para importar projetos.
           </p>
         </div>
 
-        <!-- v1.4.0 (Current) -->
+        <!-- Marco 3: v1.4.0 (Versão Atual) -->
         <div class="glass-card p-6 rounded-2xl border-neonCyan/40 shadow-[0_0_20px_rgba(0,240,255,0.15)]">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-mono font-bold text-neonCyan px-2.5 py-1 rounded bg-neonCyan/10 border border-neonCyan/40">Versão Atual</span>
             <span class="font-mono text-xs text-neonCyan font-bold">v1.4.0</span>
           </div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Effort Dock &amp; UI Linear</h3>
+          <h3 class="font-display font-bold text-lg text-white mb-2">Cascading Failover &amp; Pipeline Resiliente</h3>
           <p class="text-mutedText text-xs leading-relaxed">
-            Seletor de Effort integrado ao prompt, telemetria minimalista, contexto persistente em Configurações, pipeline de CI/CD de 5 níveis e botão de cópia autônomo com data-payload.
+            Escudo multi-provedor contra Rate Limit (NVIDIA NIM ➔ Groq ➔ OpenRouter), pipeline Playwright L4/L3/L5 e zero erros de console.
           </p>
         </div>
 
-        <!-- v1.5.0 (Planned) -->
-        <div class="glass-card p-6 rounded-2xl border-cyberBorder opacity-80">
+        <!-- Marco 4: v1.5.0 (Planejado) -->
+        <div class="glass-card p-6 rounded-2xl border-cyberBorder opacity-90">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-mono font-bold text-mutedText px-2.5 py-1 rounded bg-white/5 border border-cyberBorder">Planejado</span>
-            <span class="font-mono text-xs text-mutedText">v1.5.0</span>
+            <span class="text-xs font-mono font-bold text-neonPurple px-2.5 py-1 rounded bg-neonPurple/10 border border-neonPurple/40">Planejado</span>
+            <span class="font-mono text-xs text-neonPurple font-bold">v1.5.0</span>
           </div>
-          <h3 class="font-display font-bold text-lg text-white mb-2">Multi-Modelos &amp; Voice Live</h3>
+          <h3 class="font-display font-bold text-lg text-white mb-2">Matriz de Agentes &amp; Priority Reorder</h3>
           <p class="text-mutedText text-xs leading-relaxed">
-            Seletor dinâmico de personas NIM (Llama, DeepSeek, Qwen), atalhos globais de sistema no Windows e auto-updater nativo em background.
+            Squad customizável (Arquiteto, Coder, QA, Som), handoff contextual em 1 clique e reordenação dinâmica da fila de failover pelo usuário.
           </p>
         </div>
 

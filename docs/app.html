@@ -804,29 +804,31 @@
       max-height: 280px;
     }
 
+    /* ── Codeblocks com Paleta Deep Midnight / Neon (Paridade com Landing) ── */
     .code-block-wrapper {
       margin: 14px 0;
       border-radius: 12px;
       overflow: hidden;
-      border: 1px solid #3c4043;
-      background: #1e1f20;
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      background: #0c1017;
       display: flex;
       flex-direction: column;
       width: 100%;
       max-width: 100%;
       min-width: 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 15px rgba(56, 189, 248, 0.05);
     }
 
     .code-block-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 7px 14px;
-      background: #18191a;
-      border-bottom: 1px solid #282a2c;
+      padding: 8px 14px;
+      background: #080c14;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
       font-size: 11px;
-      font-family: monospace;
-      color: #8e918f;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      color: #94a3b8;
       width: 100%;
     }
 
@@ -834,6 +836,14 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .code-lang-tag {
+      color: #38bdf8;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10.5px;
+      letter-spacing: 0.5px;
     }
 
     .code-lines-count {
@@ -847,9 +857,9 @@
     }
 
     .btn-code-action {
-      background: transparent;
-      border: 1px solid transparent;
-      color: #c4c7c5;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -861,33 +871,89 @@
     }
 
     .btn-code-action:hover {
-      background: #282a2c;
-      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #ffffff;
     }
 
     .btn-preview-action {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: rgba(59, 130, 246, 0.4);
-      color: #93c5fd;
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      font-weight: 600;
     }
 
     .btn-preview-action:hover {
-      background: #2563eb;
-      color: #fff;
+      background: #38bdf8;
+      color: #04070f;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
     }
 
     .bubble pre {
-      background: #1e1f20 !important;
-      padding: 14px;
+      background: #0c1017 !important;
+      padding: 14px 16px;
       overflow-x: auto !important;
       overflow-y: auto !important;
       margin: 0 !important;
       border: none !important;
-      max-height: 280px;
+      max-height: 290px;
       max-width: 100%;
       box-sizing: border-box;
       white-space: pre;
       transition: max-height 0.25s ease;
+    }
+
+    .bubble pre code,
+    .code-block-wrapper code {
+      font-family: 'JetBrains Mono', Consolas, monospace !important;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    /* Sobrecarga Neon para Tokens do Highlight.js */
+    .bubble pre code.hljs .hljs-keyword,
+    .bubble pre code.hljs .hljs-selector-tag,
+    .bubble pre code.hljs .hljs-tag,
+    .bubble pre code.hljs .hljs-name {
+      color: #38bdf8 !important;
+      font-weight: 600;
+    }
+
+    .bubble pre code.hljs .hljs-title,
+    .bubble pre code.hljs .hljs-title.function_,
+    .bubble pre code.hljs .hljs-function,
+    .bubble pre code.hljs .hljs-built_in,
+    .bubble pre code.hljs .hljs-section {
+      color: #4ade80 !important;
+      font-weight: 600;
+    }
+
+    .bubble pre code.hljs .hljs-string,
+    .bubble pre code.hljs .hljs-attribute {
+      color: #c084fc !important;
+    }
+
+    .bubble pre code.hljs .hljs-attr,
+    .bubble pre code.hljs .hljs-property {
+      color: #f472b6 !important;
+    }
+
+    .bubble pre code.hljs .hljs-number,
+    .bubble pre code.hljs .hljs-literal {
+      color: #fbbf24 !important;
+    }
+
+    .bubble pre code.hljs .hljs-comment,
+    .bubble pre code.hljs .hljs-quote {
+      color: #64748b !important;
+      font-style: italic;
+    }
+
+    .bubble pre code.hljs .hljs-variable,
+    .bubble pre code.hljs .hljs-template-variable,
+    .bubble pre code.hljs .hljs-params {
+      color: #f1f5f9 !important;
     }
 
     .bubble pre.expanded {
